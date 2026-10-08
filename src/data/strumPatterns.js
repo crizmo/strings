@@ -1,0 +1,75 @@
+// Acoustic guitar strumming patterns with beat subdivisions, dynamic accents, and arrow directions
+
+export const STRUM_PATTERNS = [
+  {
+    id: 'island',
+    name: 'The Island Strum',
+    timeSignature: '4/4',
+    tempoDefault: 85,
+    tag: 'Most Popular Acoustic Strum',
+    description: 'Iconic strum used in "Riptide", "Somewhere Over the Rainbow", and hundreds of acoustic campfire anthems.',
+    // 8 eighth notes in 4/4 measure: [1, &, 2, &, 3, &, 4, &]
+    // D, -, D, U, -, U, D, U
+    steps: [
+      { beat: '1',  type: 'down', accent: true,  label: 'D' },
+      { beat: '&',  type: 'rest', accent: false, label: '-' },
+      { beat: '2',  type: 'down', accent: false, label: 'D' },
+      { beat: '&',  type: 'up',   accent: false, label: 'U' },
+      { beat: '3',  type: 'rest', accent: false, label: '-' },
+      { beat: '&',  type: 'up',   accent: true,  label: 'U' },
+      { beat: '4',  type: 'down', accent: false, label: 'D' },
+      { beat: '&',  type: 'up',   accent: false, label: 'U' },
+    ],
+  },
+  {
+    id: 'folk_country',
+    name: 'Classic Folk & Country',
+    timeSignature: '4/4',
+    tempoDefault: 95,
+    tag: 'Bob Dylan & Johnny Cash Vibe',
+    description: 'Bass note on beat 1 & 3, steady brush strum on beats 2 & 4.',
+    steps: [
+      { beat: '1',  type: 'down', accent: true,  label: 'Bass' },
+      { beat: '&',  type: 'rest', accent: false, label: '-' },
+      { beat: '2',  type: 'down', accent: false, label: 'D' },
+      { beat: '&',  type: 'up',   accent: false, label: 'U' },
+      { beat: '3',  type: 'down', accent: true,  label: 'Bass' },
+      { beat: '&',  type: 'rest', accent: false, label: '-' },
+      { beat: '4',  type: 'down', accent: false, label: 'D' },
+      { beat: '&',  type: 'up',   accent: false, label: 'U' },
+    ],
+  },
+  {
+    id: 'pop_ballad',
+    name: 'Acoustic Pop Ballad',
+    timeSignature: '4/4',
+    tempoDefault: 76,
+    tag: 'Ed Sheeran & Taylor Swift Vibe',
+    description: 'Driving acoustic pulse with a heavy percussive accent on beats 2 and 4.',
+    steps: [
+      { beat: '1',  type: 'down', accent: false, label: 'D' },
+      { beat: '&',  type: 'up',   accent: false, label: 'U' },
+      { beat: '2',  type: 'down', accent: true,  label: 'HIT' },
+      { beat: '&',  type: 'up',   accent: false, label: 'U' },
+      { beat: '3',  type: 'down', accent: false, label: 'D' },
+      { beat: '&',  type: 'up',   accent: false, label: 'U' },
+      { beat: '4',  type: 'down', accent: true,  label: 'HIT' },
+      { beat: '&',  type: 'up',   accent: false, label: 'U' },
+    ],
+  },
+  {
+    id: 'waltz',
+    name: 'Campfire 3/4 Waltz',
+    timeSignature: '3/4',
+    tempoDefault: 90,
+    tag: 'Boom-Chic-Chic (3/4 Time)',
+    description: 'Warm, swaying 3/4 groove: heavy downstroke bass on 1, gentle brush strums on 2 and 3.',
+    steps: [
+      { beat: '1', type: 'down', accent: true,  label: 'Bass' },
+      { beat: '2', type: 'down', accent: false, label: 'D' },
+      { beat: '&', type: 'up',   accent: false, label: 'U' },
+      { beat: '3', type: 'down', accent: false, label: 'D' },
+      { beat: '&', type: 'up',   accent: false, label: 'U' },
+    ],
+  },
+];

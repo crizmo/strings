@@ -1467,4 +1467,236 @@ You've made it [C]now [Fmaj7]
 [C]Falling slowly, [Fmaj7]eyes that know me
 [C]And I can't go [Fmaj7]back`,
   },
+  {
+    id: 'careless_whisper',
+    title: 'Careless Whisper',
+    artist: 'George Michael',
+    year: 1984,
+    genre: 'Pop / Soul',
+    difficulty: 'intermediate',
+    difficultyScore: 3,
+    tempo: 76,
+    capo: 0,
+    key: 'Dm',
+    timeSignature: '4/4',
+    strumPattern: 'pop_ballad',
+    categories: ['essential', '80s', 'ballad', 'pop'],
+    chordsUsed: ['Dm', 'Gm', 'Bb', 'Am', 'A7'],
+    teachingNotes: {
+      overview: 'The immortal 80s saxophone anthem arranged for acoustic guitar. Built on an unforgettable 4-chord cycle: Dm - Gm - Bb - Am.',
+      tips: [
+        'Main chord loop: [Dm] (2 bars) -> [Gm] (2 bars) -> [Bb] (2 bars) -> [Am] / [A7] (2 bars)',
+        'Beginner trick: Put Capo on Fret 5 and play [Am] - [Dm] - [F] - [Em] for an easier open-chord version!',
+        'Keep a relaxed, sensual rhythm at 76 BPM with soft down-up strumming',
+      ],
+      commonMistakes: ['Rushing the tempo', 'Pressing too hard on the Bb barre chord — keep the thumb relaxed'],
+    },
+    content: `{title: Careless Whisper}
+{artist: George Michael}
+
+[Intro]
+[Dm] [Gm] [Bb] [Am] [A7]
+
+[Verse 1]
+I feel so un[Dm]sure
+As I take your [Gm]hand and lead you to the dance floor
+[Bb] As the music dies, something in your [Am]eyes
+Calls to mind a [A7]silver screen and all its sad good[Dm]byes
+
+[Chorus]
+I'm never gonna [Dm]dance again, guilty feet have [Gm]got no rhythm
+Though it's easy to [Bb]pretend, I know you're not a [Am]fool [A7]
+Should've known [Dm]better than to cheat a friend
+And waste the [Gm]chance that I'd been given
+So I'm never gonna [Bb]dance again the way I danced with [Am]you, [A7]oh
+
+[Verse 2]
+[Dm] Time can never mend
+The careless [Gm]whispers of a good friend
+[Bb] To the heart and mind, ignorance is [Am]kind
+There's no comfort [A7]in the truth, pain is all you'll [Dm]find
+
+[Chorus]
+I'm never gonna [Dm]dance again, guilty feet have [Gm]got no rhythm
+Though it's easy to [Bb]pretend, I know you're not a [Am]fool [A7]
+Should've known [Dm]better than to cheat a friend
+And waste the [Gm]chance that I'd been given
+So I'm never gonna [Bb]dance again the way I danced with [Am]you, [A7]oh
+
+[Bridge]
+[Dm] Tonight the music seems so loud
+I wish that [Gm]we could lose this crowd
+Maybe it's [Bb]better this way, we'd hurt each other with the [Am]things we'd say [A7]
+We could have been so [Dm]good together, we could have lived this [Gm]dance forever
+But now, [Bb]who's gonna dance with [Am]me? [A7]Please stay
+
+[Chorus]
+I'm never gonna [Dm]dance again, guilty feet have [Gm]got no rhythm
+Though it's easy to [Bb]pretend, I know you're not a [Am]fool [A7]
+Should've known [Dm]better than to cheat a friend
+And waste the [Gm]chance that I'd been given
+So I'm never gonna [Bb]dance again the way I danced with [Am]you, [A7]oh
+
+[Outro]
+[Dm] (Now that you're gone) [Gm] Now that you're gone
+[Bb] What I did's so wrong, so wrong, that you had to [Am]leave me a[A7]lone
+[Dm] [Gm] [Bb] [Am] [A7] [Dm]`,
+  },
+  {
+    id: 'snooze_sza',
+    title: 'Snooze',
+    artist: 'SZA',
+    year: 2022,
+    genre: 'R&B / Soul',
+    difficulty: 'beginner',
+    difficultyScore: 2,
+    tempo: 72,
+    capo: 1,
+    key: 'F',
+    timeSignature: '4/4',
+    strumPattern: 'pop_ballad',
+    categories: ['pop', '2020s', 'essential', 'ballad'],
+    chordsUsed: ['Fmaj7', 'Em7', 'Dm7', 'Cmaj7'],
+    teachingNotes: {
+      overview: 'SZA\'s Grammy-winning masterpiece from "SOS". Features a smooth 4-chord descending progression that sounds mesmerizing on acoustic guitar.',
+      tips: [
+        'Capo on Fret 1 lets you play smooth open 7th chords: Fmaj7 -> Em7 -> Dm7 -> Cmaj7',
+        'Fmaj7 to Em7 is a simple slide down: just shift the finger shape one fret to the left and lift a finger',
+        'Use gentle finger-plucking (thumb on bass string, 3 fingers on strings 3, 2, 1) for that intimate R&B tone',
+      ],
+      commonMistakes: ['Strumming too hard — keep it velvety and relaxed', 'Rushing the 72 BPM tempo'],
+    },
+    content: `{title: Snooze}
+{artist: SZA}
+{capo: 1}
+
+[Intro]
+[Fmaj7] [Em7] [Dm7] [Cmaj7]
+
+[Verse 1]
+I'll touch that [Fmaj7]fire for you
+I do that [Em7]three, four times again, I testify for you
+Told myself I [Dm7]wouldn't cry for you
+No, I won't, no, I [Cmaj7]won't, yeah, yeah
+
+[Pre-Chorus]
+I might front like I [Fmaj7]don't care, but I do
+No, I'm [Em7]frontin' like I'm careless, I'm carein'
+I could [Dm7]lose everything, but I won't lose you
+Send me [Cmaj7]location, I'm slidin' through
+
+[Chorus]
+I can't [Fmaj7]lose when I'm with you
+How can I [Em7]snooze and miss the moment?
+You just too im[Dm7]portant
+Nobody do body like you [Cmaj7]do
+I can't [Fmaj7]lose when I'm with you
+How can I [Em7]snooze and miss the moment?
+You just too im[Dm7]portant
+Nobody do body like you [Cmaj7]do, you do
+
+[Verse 2]
+In a [Fmaj7]drop-top, ridin' with you
+Head in the [Em7]clouds, I'm flyin' with you
+I'm so ob[Dm7]sessed, I'm blind to the truth
+Ain't got no [Cmaj7]shame when it come to you
+
+[Pre-Chorus]
+I might front like I [Fmaj7]don't care, but I do
+No, I'm [Em7]frontin' like I'm careless, I'm carein'
+I could [Dm7]lose everything, but I won't lose you
+Send me [Cmaj7]location, I'm slidin' through
+
+[Chorus]
+I can't [Fmaj7]lose when I'm with you
+How can I [Em7]snooze and miss the moment?
+You just too im[Dm7]portant
+Nobody do body like you [Cmaj7]do
+I can't [Fmaj7]lose when I'm with you
+How can I [Em7]snooze and miss the moment?
+You just too im[Dm7]portant
+Nobody do body like you [Cmaj7]do, you do
+
+[Outro]
+[Fmaj7] (Can't lose when I'm with you)
+[Em7] (How can I snooze and miss the moment?)
+[Dm7] (Nobody do body like you do)
+[Cmaj7] (You do)`,
+  },
+  {
+    id: 'every_breath_you_take',
+    title: 'Every Breath You Take',
+    artist: 'The Police',
+    year: 1983,
+    genre: 'Rock / Pop',
+    difficulty: 'beginner',
+    difficultyScore: 2,
+    tempo: 117,
+    capo: 0,
+    key: 'G',
+    timeSignature: '4/4',
+    strumPattern: 'rock_steady',
+    categories: ['essential', 'rock', '80s'],
+    chordsUsed: ['G', 'Em', 'C', 'D', 'Eb', 'F'],
+    teachingNotes: {
+      overview: 'The Police\'s global #1 classic. Andy Summers\' iconic 9th chord arpeggio line sounds full and resonant with open acoustic chords.',
+      tips: [
+        'Main verse progression follows a classic 50s doo-wop cycle: [G] (2 bars) -> [Em] (2 bars) -> [C] (1 bar) -> [D] (1 bar) -> [G] (2 bars)',
+        'Try light palm-muting with the fleshy edge of your right hand resting on the bridge for that signature tight pulse',
+        'The bridge features a dramatic chromatic lift with [Eb] and [F] chords!',
+      ],
+      commonMistakes: ['Rushing the tempo (keep steady 117 BPM)', 'Strumming too loudly during the verses — build dynamics into the chorus'],
+    },
+    content: `{title: Every Breath You Take}
+{artist: The Police}
+
+[Intro]
+[G] [Em] [C] [D] [G]
+
+[Verse 1]
+Every breath you [G]take and every move you [Em]make
+Every bond you [C]break, every step you [D]take
+I'll be watching [Em]you
+
+[Verse 2]
+Every single [G]day and every word you [Em]say
+Every game you [C]play, every night you [D]stay
+I'll be watching [G]you
+
+[Chorus]
+Oh, can't you [C]see you belong to [G]me?
+How my poor heart [A7]aches with every step you [D]take
+
+[Verse 3]
+Every move you [G]make and every vow you [Em]break
+Every smile you [C]fake, every claim you [D]stake
+I'll be watching [Em]you
+
+[Bridge]
+[Eb] Since you've gone, I've been lost without a trace
+[F] I dream at night, I can only see your face
+[Eb] I look around, but it's you I can't replace
+[F] I feel so cold, and I long for your embrace
+[Eb] I keep crying, baby, baby, [G]please
+
+[Solo]
+[G] [Em] [C] [D] [Em]
+[G] [Em] [C] [D] [G]
+
+[Chorus]
+Oh, can't you [C]see you belong to [G]me?
+How my poor heart [A7]aches with every step you [D]take
+
+[Verse 4]
+Every move you [G]make and every vow you [Em]break
+Every smile you [C]fake, every claim you [D]stake
+I'll be watching [Em]you
+Every move you [C]make, every step you [D]take
+I'll be watching [Em]you
+
+[Outro]
+I'll be watching [G]you (Every breath you [Em]take, every move you [C]make)
+I'll be watching [D]you (Every bond you [G]break, every step you [Em]take)
+I'll be watching [G]you`,
+  },
 ];

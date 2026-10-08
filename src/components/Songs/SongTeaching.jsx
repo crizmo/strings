@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { CHORDS } from '../../data/chords';
 import { STRUM_PATTERNS } from '../../data/strumPatterns';
 import { playStrum } from '../../audio/acousticSynth';
+import { getSongLevels } from '../../utils/songLevels';
 import GlassCard from '../shared/GlassCard';
 import ChordBox from '../Chords/ChordBox';
 import {
@@ -13,20 +14,37 @@ import {
   ArrowRight,
   CheckCircle2,
   Music2,
-  GraduationCap
+  GraduationCap,
+  Sparkles,
+  Zap,
+  Target
 } from 'lucide-react';
 
 export default function SongTeaching({ song, onSwitchToPlay }) {
+  const [selectedLevel, setSelectedLevel] = useState(1);
+  const songLevels = useMemo(() => getSongLevels(song), [song]);
+  const activeLevelData = songLevels?.[selectedLevel] || songLevels?.[1];
+
   const [selectedChord, setSelectedChord] = useState(
-    song?.chordsUsed?.[0] || 'C'
+    activeLevelData?.chords?.[0] || song?.chordsUsed?.[0] || 'C'
   );
   const [isPlayingStrum, setIsPlayingStrum] = useState(false);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [practiceTempo, setPracticeTempo] = useState(
-    Math.round((song?.tempo || 90) * 0.75) // 75% speed for learning
+    activeLevelData?.tempo || Math.round((song?.tempo || 90) * 0.75)
   );
 
+  useEffect(() => {
+    if (activeLevelData?.chords?.length) {
+      setSelectedChord(activeLevelData.chords[0]);
+    }
+    if (activeLevelData?.tempo) {
+      setPracticeTempo(activeLevelData.tempo);
+    }
+  }, [selectedLevel, song]);
+
   const pattern =
+    STRUM_PATTERNS.find((p) => p.id === activeLevelData?.strumPatternId) ||
     STRUM_PATTERNS.find((p) => p.id === song?.strumPattern) ||
     STRUM_PATTERNS[0];
 
@@ -86,7 +104,7 @@ export default function SongTeaching({ song, onSwitchToPlay }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-      {/* 1. Master Lesson Header */}
+      {/* 1. Master Lesson Header & Level Selector */}
       <GlassCard
         variant="elevated"
         style={{
@@ -103,6 +121,7 @@ export default function SongTeaching({ song, onSwitchToPlay }) {
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '1.5rem',
+            marginBottom: '1.5rem',
           }}
         >
           <div>
@@ -157,6 +176,119 @@ export default function SongTeaching({ song, onSwitchToPlay }) {
           </button>
         </div>
 
+        {/* 3-Level Progressive Step Selector */}
+        <div
+          style={{
+            background: '#ffffff',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-xl)',
+            padding: '1.25rem',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '1rem',
+              marginBottom: '1rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Target size={18} style={{ color: 'var(--accent-primary)' }} />
+              <span style={{ fontWeight: 800, fontSize: '0.95rem' }}>
+                Select Your Mastery Level:
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {[1, 2, 3].map((lvl) => {
+                const data = songLevels?.[lvl];
+                const isSelected = selectedLevel === lvl;
+                return (
+                  <button
+                    key={lvl}
+                    onClick={() => setSelectedLevel(lvl)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.45rem',
+                      padding: '0.45rem 0.9rem',
+                      borderRadius: 'var(--radius-lg)',
+                      border: isSelected ? `1.5px solid ${data.border}` : '1px solid var(--border-default)',
+                      background: isSelected ? data.bg : 'var(--bg-subtle)',
+                      color: isSelected ? data.color : 'var(--text-secondary)',
+                      fontWeight: isSelected ? 800 : 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        background: data.color,
+                      }}
+                    />
+                    <span>{data.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {activeLevelData && (
+            <div
+              style={{
+                padding: '0.9rem 1.1rem',
+                borderRadius: 'var(--radius-lg)',
+                background: activeLevelData.bg,
+                border: `1px solid ${activeLevelData.border}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span
+                  className="badge"
+                  style={{
+                    background: activeLevelData.color,
+                    color: '#ffffff',
+                    fontWeight: 800,
+                    fontSize: '0.72rem',
+                  }}
+                >
+                  {activeLevelData.badge}
+                </span>
+                <strong style={{ color: 'var(--text-primary)', fontSize: '0.9rem' }}>
+                  {activeLevelData.focusGoal}
+                </strong>
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '1.25rem',
+                  color: 'var(--text-secondary)',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  marginTop: '0.2rem',
+                }}
+              >
+                <span>🥁 Strumming: {activeLevelData.strummingLabel}</span>
+                <span>⚡ Practice Tempo: {activeLevelData.tempo} BPM</span>
+                <span>🎸 Chords: {activeLevelData.chords?.join(' • ')}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
         {song?.teachingNotes?.overview && (
           <div
             style={{
@@ -188,7 +320,7 @@ export default function SongTeaching({ song, onSwitchToPlay }) {
             }}
           >
             <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
-              1. Chords in this Song
+              1. Chords in {activeLevelData?.name || 'this'} Level
             </h3>
             <span
               style={{
@@ -197,7 +329,7 @@ export default function SongTeaching({ song, onSwitchToPlay }) {
                 fontWeight: 600,
               }}
             >
-              {song?.chordsUsed?.length || 0} chords
+              {activeLevelData?.chords?.length || song?.chordsUsed?.length || 0} chords
             </span>
           </div>
 
@@ -210,7 +342,7 @@ export default function SongTeaching({ song, onSwitchToPlay }) {
               marginBottom: '1.25rem',
             }}
           >
-            {song?.chordsUsed?.map((chord) => {
+            {(activeLevelData?.chords || song?.chordsUsed || []).map((chord) => {
               const isSelected = selectedChord.toLowerCase() === chord.toLowerCase();
               return (
                 <button
@@ -483,6 +615,29 @@ export default function SongTeaching({ song, onSwitchToPlay }) {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            {activeLevelData?.tips?.map((lvlTip, i) => (
+              <div
+                key={`lvl-${i}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.6rem',
+                  padding: '0.75rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: activeLevelData.bg,
+                  border: `1px solid ${activeLevelData.border}`,
+                }}
+              >
+                <Sparkles
+                  size={16}
+                  style={{ color: activeLevelData.color, marginTop: '2px', flexShrink: 0 }}
+                />
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                  <strong style={{ color: activeLevelData.color }}>{activeLevelData.name} Tip:</strong> {lvlTip}
+                </span>
+              </div>
+            ))}
+
             {song?.teachingNotes?.tips?.map((tip, i) => (
               <div
                 key={i}
@@ -504,11 +659,7 @@ export default function SongTeaching({ song, onSwitchToPlay }) {
                   {tip}
                 </span>
               </div>
-            )) || (
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                Keep your thumb behind the neck and arch your fingers so every string rings cleanly.
-              </p>
-            )}
+            ))}
           </div>
         </GlassCard>
 

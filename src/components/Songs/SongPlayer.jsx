@@ -19,6 +19,7 @@ import ChordPopover from './ChordPopover';
 import ToneSelector from '../shared/ToneSelector';
 import { playStrum } from '../../audio/acousticSynth';
 import { CHORDS } from '../../data/chords';
+import { getSongLevels } from '../../utils/songLevels';
 
 const NOTES_SHARP = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const NOTES_FLAT  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -54,6 +55,7 @@ const transposeChord = (chordInput, delta) => {
 };
 
 export default function SongPlayer({ song }) {
+  const [selectedLevel, setSelectedLevel] = useState(1);
   const [transposeDelta, setTransposeDelta] = useState(0);
   const [capoOffset, setCapoOffset] = useState(song?.capo || 0);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
@@ -66,6 +68,9 @@ export default function SongPlayer({ song }) {
   const scrollContainerRef = useRef(null);
   const scrollIntervalRef = useRef(null);
 
+  const songLevels = useMemo(() => getSongLevels(song), [song]);
+  const activeLevelData = songLevels?.[selectedLevel] || songLevels?.[1];
+
   useEffect(() => {
     setTransposeDelta(0);
     setCapoOffset(song?.capo || 0);
@@ -74,18 +79,19 @@ export default function SongPlayer({ song }) {
   }, [song]);
 
   const parsedSong = useMemo(() => {
-    if (!song?.content) return null;
+    const content = activeLevelData?.content || song?.content;
+    if (!content) return null;
     try {
       const parser = new ChordSheetJS.ChordProParser();
-      return parser.parse(song.content);
+      return parser.parse(content);
     } catch (e) {
       console.error('Failed to parse chord sheet:', e);
       return null;
     }
-  }, [song]);
+  }, [song, activeLevelData]);
 
   const uniqueChords = useMemo(() => {
-    if (!parsedSong) return song?.chordsUsed || [];
+    if (!parsedSong) return activeLevelData?.chords || song?.chordsUsed || [];
     const set = new Set();
     parsedSong.lines.forEach((line) => {
       line.items.forEach((item) => {
@@ -96,7 +102,7 @@ export default function SongPlayer({ song }) {
       });
     });
     return Array.from(set);
-  }, [parsedSong, transposeDelta, song]);
+  }, [parsedSong, transposeDelta, activeLevelData, song]);
 
   // Robust Auto-Scroll Loop
   useEffect(() => {
@@ -164,6 +170,143 @@ export default function SongPlayer({ song }) {
         position: 'relative',
       }}
     >
+      {/* 3-Level Mastery Level Switcher Banner */}
+      <GlassCard
+        variant="elevated"
+        style={{
+          padding: '1.25rem 1.5rem',
+          borderRadius: 'var(--radius-xl)',
+          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+          border: '1px solid var(--border-default)',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '1rem',
+            marginBottom: '0.85rem',
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                color: 'var(--text-dim)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                marginBottom: '0.2rem',
+              }}
+            >
+              Mastery Progression
+            </div>
+            <div
+              style={{
+                fontFamily: 'var(--font-heading)',
+                fontWeight: 800,
+                fontSize: '1.1rem',
+                color: 'var(--text-primary)',
+              }}
+            >
+              Choose Your Playing Level
+            </div>
+          </div>
+
+          {/* 3 Level Buttons */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '0.4rem',
+              background: 'var(--bg-subtle)',
+              padding: '0.3rem',
+              borderRadius: 'var(--radius-xl)',
+              border: '1px solid var(--border-default)',
+            }}
+          >
+            {[1, 2, 3].map((lvl) => {
+              const data = songLevels?.[lvl];
+              const isSelected = selectedLevel === lvl;
+              return (
+                <button
+                  key={lvl}
+                  onClick={() => setSelectedLevel(lvl)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    padding: '0.5rem 0.9rem',
+                    borderRadius: 'var(--radius-lg)',
+                    border: isSelected ? `1px solid ${data.border}` : '1px solid transparent',
+                    background: isSelected ? data.bg : 'transparent',
+                    color: isSelected ? data.color : 'var(--text-secondary)',
+                    fontWeight: isSelected ? 800 : 600,
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      background: data.color,
+                      display: 'inline-block',
+                    }}
+                  />
+                  <span>{data.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Active Level Detail Pill */}
+        {activeLevelData && (
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-lg)',
+              background: activeLevelData.bg,
+              border: `1px solid ${activeLevelData.border}`,
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '0.75rem',
+              fontSize: '0.84rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <strong style={{ color: activeLevelData.color, fontWeight: 800 }}>
+                {activeLevelData.badge}:
+              </strong>
+              <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
+                {activeLevelData.focusGoal}
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                color: 'var(--text-secondary)',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+              }}
+            >
+              <span>🥁 {activeLevelData.strummingFormula}</span>
+              <span>⚡ Rec. Tempo: {activeLevelData.tempo} BPM</span>
+            </div>
+          </div>
+        )}
+      </GlassCard>
+
       {/* Top Sticky Toolbar */}
       <GlassCard
         variant="elevated"

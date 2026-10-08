@@ -1,8 +1,10 @@
 {
-  "name": "string",
+  "name": "strings",
   "private": true,
-  "version": "0.0.0",
+  "version": "2.0.0",
+  "description": "Modern Acoustic Guitar Practice Companion — Interactive ChordPro Sheets, 3-Level Progressive Songs, Physical Acoustic Audio Engine & Precision Tuner",
   "type": "module",
+  "homepage": "https://strings.journy.net",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

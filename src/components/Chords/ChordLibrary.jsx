@@ -1,4 +1,4 @@
-// Chord Encyclopedia & Interactive Library — Grouped by Category with Multi-Voicing Detail Modal
+// Clean, Simple Guitar Chord Encyclopedia
 import React, { useState, useMemo } from 'react';
 import { CHORDS, CHORD_CATEGORIES } from '../../data/chords';
 import ChordBox from './ChordBox';
@@ -6,12 +6,11 @@ import ChordDetailModal from './ChordDetailModal';
 import PageHeader from '../shared/PageHeader';
 import GlassCard from '../shared/GlassCard';
 import { playStrum } from '../../audio/acousticSynth';
-import { Search, Volume2, BookOpen, Layers, Sparkles, Filter } from 'lucide-react';
+import { Search, Volume2, BookOpen, Layers } from 'lucide-react';
 
 export default function ChordLibrary() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [activeModalChord, setActiveModalChord] = useState(null);
 
   const filteredChords = useMemo(() => {
@@ -31,20 +30,14 @@ export default function ChordLibrary() {
         if (chord.category !== selectedCategory) return false;
       }
 
-      // Difficulty filter
-      if (selectedDifficulty !== 'all') {
-        if (chord.difficulty.toLowerCase() !== selectedDifficulty.toLowerCase())
-          return false;
-      }
-
       return true;
     });
-  }, [searchQuery, selectedCategory, selectedDifficulty]);
+  }, [searchQuery, selectedCategory]);
 
-  // Group chords by category for grouped layout
+  // Group chords by category when in "All" view and not searching
   const groupedChords = useMemo(() => {
     if (selectedCategory !== 'all' || searchQuery.trim()) {
-      return null; // Show standard grid when actively filtering or searching
+      return null;
     }
 
     const groups = {};
@@ -80,10 +73,10 @@ export default function ChordLibrary() {
   return (
     <div style={{ paddingBottom: '4rem' }}>
       <PageHeader
-        badge="Chord Encyclopedia"
+        badge="Chord Book"
         badgeIcon={<BookOpen size={14} />}
-        title="Acoustic Guitar Chord Book"
-        subtitle="Explore cowboy chords, 7ths, suspensions, and alternative fretboard voicings with interactive acoustic tone previews."
+        title="Guitar Chords"
+        subtitle="Explore major, minor, 7th, and barre chords with finger placements, multiple voicings, and acoustic audio."
       />
 
       {/* Filter & Search Bar */}
@@ -97,73 +90,33 @@ export default function ChordLibrary() {
           gap: '1rem',
         }}
       >
-        {/* Top: Search & Difficulty */}
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '1rem',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ position: 'relative', flex: '1 1 260px', minWidth: '220px' }}>
-            <Search
-              size={18}
-              style={{
-                position: 'absolute',
-                left: '14px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: 'var(--text-muted)',
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Search chords (e.g. C Major, Fmaj7, Em7, barre)..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input"
-              style={{
-                paddingLeft: '42px',
-                width: '100%',
-              }}
-            />
-          </div>
-
-          {/* Difficulty Filter */}
-          <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-            {['all', 'beginner', 'intermediate'].map((diff) => (
-              <button
-                key={diff}
-                onClick={() => setSelectedDifficulty(diff)}
-                style={{
-                  padding: '0.4rem 0.85rem',
-                  borderRadius: 'var(--radius-md)',
-                  background:
-                    selectedDifficulty === diff
-                      ? 'var(--accent-primary)'
-                      : 'var(--bg-subtle)',
-                  color: selectedDifficulty === diff ? '#ffffff' : 'var(--text-secondary)',
-                  border:
-                    selectedDifficulty === diff
-                      ? '1px solid var(--accent-primary)'
-                      : '1px solid var(--border-default)',
-                  fontSize: '0.82rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  textTransform: 'capitalize',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {diff === 'all' ? 'All Difficulties' : diff}
-              </button>
-            ))}
-          </div>
+        {/* Search Input */}
+        <div style={{ position: 'relative', width: '100%' }}>
+          <Search
+            size={18}
+            style={{
+              position: 'absolute',
+              left: '14px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)',
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Search chords (e.g. C Major, Am, D7, Barre)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input"
+            style={{
+              paddingLeft: '42px',
+              width: '100%',
+            }}
+          />
         </div>
 
-        {/* Bottom: Category Tabs */}
-        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', borderTop: '1px solid var(--border-default)', paddingTop: '0.85rem' }}>
+        {/* Clean Category Tabs */}
+        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
           {CHORD_CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
@@ -171,23 +124,19 @@ export default function ChordLibrary() {
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
                 style={{
-                  padding: '0.45rem 0.9rem',
+                  padding: '0.45rem 0.95rem',
                   borderRadius: 'var(--radius-lg)',
                   border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-default)',
                   background: isSelected ? 'var(--accent-primary-subtle)' : '#ffffff',
                   color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                  fontSize: '0.84rem',
+                  fontSize: '0.85rem',
                   fontWeight: isSelected ? 800 : 600,
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
                   transition: 'all 0.15s ease',
                   boxShadow: isSelected ? 'var(--shadow-sm)' : 'none',
                 }}
               >
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
+                {cat.label}
               </button>
             );
           })}
@@ -196,32 +145,31 @@ export default function ChordLibrary() {
 
       {/* Render Chords: Grouped View OR Filtered Flat Grid */}
       {groupedChords ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
           {Object.entries(groupedChords).map(([catId, { category, chords }]) => {
             if (!chords.length) return null;
             return (
               <div key={catId}>
                 {/* Category Header */}
-                <div style={{ marginBottom: '1.25rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
-                    <span style={{ fontSize: '1.25rem' }}>{category.icon}</span>
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <h2
                       style={{
                         margin: 0,
                         fontFamily: 'var(--font-heading)',
                         fontWeight: 800,
-                        fontSize: '1.35rem',
+                        fontSize: '1.25rem',
                         color: 'var(--text-primary)',
                       }}
                     >
                       {category.label}
                     </h2>
                     <span className="badge" style={{ background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
-                      {chords.length} chords
+                      {chords.length}
                     </span>
                   </div>
                   {category.description && (
-                    <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)' }}>
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                       {category.description}
                     </p>
                   )}
@@ -374,7 +322,7 @@ function ChordCard({ chord, onPlay, onClick }) {
         )}
       </div>
 
-      {/* Card Footer: Tag & Voicing Count */}
+      {/* Card Footer */}
       <div
         style={{
           marginTop: '1.25rem',
@@ -386,8 +334,8 @@ function ChordCard({ chord, onPlay, onClick }) {
           fontSize: '0.75rem',
         }}
       >
-        <span style={{ color: 'var(--accent-warm)', fontWeight: 700 }}>
-          {chord.tag ? `✨ ${chord.tag}` : 'Acoustic Voicing'}
+        <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>
+          {chord.tag}
         </span>
 
         {voicingCount > 1 && (
@@ -401,7 +349,7 @@ function ChordCard({ chord, onPlay, onClick }) {
               padding: '0.2rem 0.5rem',
             }}
           >
-            <Layers size={11} /> {voicingCount} shapes
+            <Layers size={11} /> {voicingCount} voicings
           </span>
         )}
       </div>

@@ -4,6 +4,7 @@
   "version": "2.0.0",
   "description": "Modern Acoustic Guitar Practice Companion — Interactive ChordPro Sheets, 3-Level Progressive Songs, Physical Acoustic Audio Engine & Precision Tuner",
   "type": "module",
+  "license": "MIT",
   "homepage": "https://strings.journy.net",
   "scripts": {
     "dev": "vite",

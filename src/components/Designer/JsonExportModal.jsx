@@ -1,6 +1,6 @@
 // JSON Export, Download & Import Modal for Song Designer
 // Formatted matching exact app SONGS structure with beginner field explanations
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Copy,
@@ -21,12 +21,19 @@ export default function JsonExportModal({
   onClose,
   onSaveToLibrary,
   onImportSong,
+  defaultTab = 'export',
 }) {
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState('export'); // 'export' | 'import' | 'guide'
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [importJsonText, setImportJsonText] = useState('');
   const [importError, setImportError] = useState('');
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [isOpen, defaultTab]);
 
   if (!isOpen) return null;
 
@@ -288,7 +295,7 @@ export default function JsonExportModal({
                   }}
                 >
                   {copied ? <Check size={15} /> : <Copy size={15} />}
-                  <span>{copied ? 'Copied to Clipboard!' : 'Copy JSON'}</span>
+                  <span>{copied ? 'Copied to Clipboard!' : 'Copy Form JSON'}</span>
                 </button>
 
                 <button

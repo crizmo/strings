@@ -19,6 +19,8 @@ import {
   Guitar,
   HelpCircle,
   FolderOpen,
+  Copy,
+  Upload,
 } from 'lucide-react';
 import PageHeader from '../shared/PageHeader';
 import GlassCard from '../shared/GlassCard';
@@ -37,6 +39,7 @@ import {
   saveCustomSong,
   getCustomSongs,
   extractChordsFromChordPro,
+  formatSongAsJson,
 } from '../../utils/customSongs';
 import { SONGS } from '../../data/songs';
 
@@ -107,6 +110,8 @@ export default function SongDesigner() {
   const [customChords, setCustomChords] = useState(songData.customChords || []);
   const [showChordBuilder, setShowChordBuilder] = useState(false);
   const [showJsonModal, setShowJsonModal] = useState(false);
+  const [jsonModalTab, setJsonModalTab] = useState('export');
+  const [copiedJsonNotification, setCopiedJsonNotification] = useState(false);
   const [showLocalStorageModal, setShowLocalStorageModal] = useState(false);
   const [localStorageModalTab, setLocalStorageModalTab] = useState('save');
   const [customSongsList, setCustomSongsList] = useState(() => getCustomSongs());
@@ -290,6 +295,29 @@ export default function SongDesigner() {
     });
   };
 
+  // 1-Click Copy Form JSON to Clipboard
+  const handleCopyFormJson = async () => {
+    try {
+      const fullSong = {
+        ...songData,
+        measures,
+        customChords,
+        chordsUsed: detectedChords,
+      };
+      const jsonStr = formatSongAsJson(fullSong);
+      await navigator.clipboard.writeText(jsonStr);
+      setCopiedJsonNotification(true);
+      setStatusToast(`Copied complete song form JSON for "${fullSong.title}" to clipboard!`);
+      setTimeout(() => {
+        setCopiedJsonNotification(false);
+      }, 2500);
+    } catch (e) {
+      console.warn('Clipboard copy error:', e);
+      setJsonModalTab('export');
+      setShowJsonModal(true);
+    }
+  };
+
   return (
     <div style={{ paddingBottom: '5rem' }}>
       {/* Page Header */}
@@ -418,10 +446,65 @@ export default function SongDesigner() {
               <span>Load from Local Storage {customSongsList.length > 0 ? `(${customSongsList.length})` : ''}</span>
             </button>
 
+            {/* 1-Click Copy Form JSON Button */}
+            <button
+              type="button"
+              onClick={handleCopyFormJson}
+              style={{
+                padding: '0.5rem 0.95rem',
+                borderRadius: 'var(--radius-md)',
+                border: copiedJsonNotification ? '1.5px solid var(--success-border)' : '1px solid var(--border-default)',
+                background: copiedJsonNotification ? 'var(--success-subtle)' : '#ffffff',
+                color: copiedJsonNotification ? 'var(--success)' : 'var(--text-primary)',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: 'var(--shadow-xs)',
+                transition: 'all 0.15s ease',
+              }}
+              title="Copy complete Song Form structure as JSON to clipboard"
+            >
+              {copiedJsonNotification ? <Check size={15} /> : <Copy size={15} style={{ color: 'var(--accent-primary)' }} />}
+              <span>{copiedJsonNotification ? 'Copied Form JSON!' : 'Copy Form JSON'}</span>
+            </button>
+
+            {/* Load / Import from JSON Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setJsonModalTab('import');
+                setShowJsonModal(true);
+              }}
+              style={{
+                padding: '0.5rem 0.95rem',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-default)',
+                background: '#ffffff',
+                color: 'var(--text-secondary)',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                boxShadow: 'var(--shadow-xs)',
+              }}
+              title="Paste song JSON to load into the form"
+            >
+              <Upload size={15} style={{ color: 'var(--accent-primary)' }} />
+              <span>Load from JSON</span>
+            </button>
+
             {/* Export JSON Button */}
             <button
               type="button"
-              onClick={() => setShowJsonModal(true)}
+              onClick={() => {
+                setJsonModalTab('export');
+                setShowJsonModal(true);
+              }}
               style={{
                 padding: '0.5rem 0.95rem',
                 borderRadius: 'var(--radius-md)',
@@ -436,6 +519,7 @@ export default function SongDesigner() {
                 gap: '0.4rem',
                 boxShadow: 'var(--shadow-sm)',
               }}
+              title="Open Song JSON Studio"
             >
               <FileJson size={15} />
               <span>Export JSON</span>
@@ -1011,6 +1095,7 @@ export default function SongDesigner() {
           chordsUsed: detectedChords,
         }}
         isOpen={showJsonModal}
+        defaultTab={jsonModalTab}
         onClose={() => setShowJsonModal(false)}
         onSaveToLibrary={handleSaveToLibrary}
         onImportSong={(imported) => {
@@ -1022,6 +1107,7 @@ export default function SongDesigner() {
           if (imported.customChords) {
             setCustomChords(imported.customChords);
           }
+          setStatusToast(`Loaded "${imported.title || 'Song'}" from JSON into form!`);
         }}
       />
 

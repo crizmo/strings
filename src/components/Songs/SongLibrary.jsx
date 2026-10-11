@@ -1,5 +1,6 @@
 // Song Library & Exploration Hub — Clean light theme
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { SONGS } from '../../data/songs';
 import { SONG_CATEGORIES, DIFFICULTY_LEVELS } from '../../data/songCategories';
 import SongCard from './SongCard';
@@ -14,7 +15,9 @@ import {
   Star,
   Heart,
   X,
-  Filter
+  Filter,
+  PenTool,
+  Sparkles,
 } from 'lucide-react';
 
 export default function SongLibrary() {
@@ -25,6 +28,12 @@ export default function SongLibrary() {
   const [sortBy, setSortBy] = useState('difficultyScore');
 
   const [favorites, setFavorites] = useLocalStorage('string_favorites', []);
+  const [customSongs] = useLocalStorage('string_custom_songs', []);
+
+  // Merge custom songs and built-in SONGS
+  const allSongs = useMemo(() => {
+    return [...customSongs, ...SONGS];
+  }, [customSongs]);
 
   const toggleFavorite = (songId) => {
     if (favorites.includes(songId)) {
@@ -36,7 +45,12 @@ export default function SongLibrary() {
 
   // Filter & Sort Logic
   const filteredSongs = useMemo(() => {
-    return SONGS.filter((song) => {
+    return allSongs.filter((song) => {
+      // 0. Custom filter
+      if (selectedCategory === 'custom') {
+        if (!song.isCustom) return false;
+      }
+
       // 1. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -48,7 +62,7 @@ export default function SongLibrary() {
       }
 
       // 2. Category
-      if (selectedCategory !== 'all') {
+      if (selectedCategory !== 'all' && selectedCategory !== 'custom') {
         if (!song.categories?.includes(selectedCategory)) return false;
       }
 
@@ -102,6 +116,27 @@ export default function SongLibrary() {
         badgeIcon={<Music size={14} />}
         title="Song Library & Guitar Lessons"
         subtitle="Explore beginner-friendly acoustic songs with detailed chord teaching, strum guides, and interactive chord sheets."
+        actions={
+          <Link
+            to="/designer"
+            style={{
+              padding: '0.55rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--accent-primary)',
+              color: '#ffffff',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              boxShadow: 'var(--shadow-sm)',
+            }}
+          >
+            <PenTool size={15} />
+            <span>+ Create Song</span>
+          </Link>
+        }
       />
 
       {/* Search & Main Filter Bar */}
@@ -212,6 +247,33 @@ export default function SongLibrary() {
             scrollbarWidth: 'none',
           }}
         >
+          {/* My Custom Songs pill */}
+          {customSongs.length > 0 && (
+            <button
+              onClick={() => setSelectedCategory('custom')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.35rem',
+                padding: '0.45rem 0.9rem',
+                borderRadius: 'var(--radius-full)',
+                background: selectedCategory === 'custom'
+                  ? 'var(--accent-warm)'
+                  : 'var(--accent-warm-subtle)',
+                color: selectedCategory === 'custom' ? '#ffffff' : 'var(--accent-warm)',
+                border: '1px solid var(--accent-warm-border)',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <span>✨</span>
+              <span>My Songs ({customSongs.length})</span>
+            </button>
+          )}
+
           {SONG_CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (

@@ -7,7 +7,8 @@ import {
   Music2,
   Activity,
   ArrowLeft,
-  Heart
+  Heart,
+  PenTool,
 } from 'lucide-react';
 import SongTeaching from './SongTeaching';
 import SongPlayer from './SongPlayer';
@@ -25,13 +26,15 @@ export default function SongDetail() {
 
   const [activeTab, setActiveTab] = useState(initialTab);
   const [favorites, setFavorites] = useLocalStorage('string_favorites', []);
+  const [customSongs] = useLocalStorage('string_custom_songs', []);
 
   // Practice Mode States
   const [practiceSpeed, setPracticeSpeed] = useState(80);
   const [isLooping, setIsLooping] = useState(false);
   const [activePracticeChordIdx, setActivePracticeChordIdx] = useState(0);
 
-  const song = SONGS.find((s) => s.id === songId) || SONGS[0];
+  const allSongs = [...customSongs, ...SONGS];
+  const song = allSongs.find((s) => s.id === songId) || SONGS[0];
   const isFavorite = favorites.includes(song.id);
 
   const toggleFavorite = () => {
@@ -88,18 +91,29 @@ export default function SongDetail() {
           <ArrowLeft size={16} /> Back to Library
         </button>
 
-        <button
-          onClick={toggleFavorite}
-          className="btn btn-secondary btn-icon"
-          style={{
-            width: '36px',
-            height: '36px',
-            color: isFavorite ? 'var(--danger)' : 'var(--text-secondary)',
-          }}
-          title={isFavorite ? 'Saved to Favorites' : 'Add to Favorites'}
-        >
-          <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button
+            onClick={() => navigate(`/designer/${song.id}`)}
+            className="btn btn-secondary"
+            style={{ gap: '0.4rem', fontSize: '0.85rem' }}
+            title="Edit or remix this song in the Chord Sheet Designer"
+          >
+            <PenTool size={15} /> Edit in Designer
+          </button>
+
+          <button
+            onClick={toggleFavorite}
+            className="btn btn-secondary btn-icon"
+            style={{
+              width: '36px',
+              height: '36px',
+              color: isFavorite ? 'var(--danger)' : 'var(--text-secondary)',
+            }}
+            title={isFavorite ? 'Saved to Favorites' : 'Add to Favorites'}
+          >
+            <Heart size={18} fill={isFavorite ? 'currentColor' : 'none'} />
+          </button>
+        </div>
       </div>
 
       {/* Tabs Navigation */}

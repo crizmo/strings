@@ -13,7 +13,8 @@ import {
   Trophy,
   Clock,
   Sparkles,
-  Guitar
+  Guitar,
+  PenTool,
 } from 'lucide-react';
 import { SONGS } from '../../data/songs';
 import GlassCard from '../shared/GlassCard';
@@ -21,13 +22,22 @@ import ToneSelector from '../shared/ToneSelector';
 
 const QUICK_ACTIONS = [
   {
+    label: 'Song Designer',
+    desc: 'Design chord sheets & rhythm patterns',
+    icon: PenTool,
+    path: '/designer',
+    color: '#4f46e5',
+    bg: '#eef2ff',
+    border: '#c7d2fe',
+  },
+  {
     label: '40+ Famous Songs',
     desc: 'Chord sheets, auto-scroll & lessons',
     icon: Music2,
     path: '/songs',
-    color: '#4f46e5',
-    bg: '#eef2ff',
-    border: '#c7d2fe',
+    color: '#0284c7',
+    bg: '#e0f2fe',
+    border: '#bae6fd',
   },
   {
     label: 'Precision Tuner',

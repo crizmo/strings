@@ -1,10 +1,10 @@
-// Vertical sidebar navigation — Clean light theme
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Music2, Mic, Zap, Piano, Radio, Library, Guitar } from 'lucide-react';
+import { Home, Music2, Mic, Zap, Piano, Radio, Library, Guitar, PenTool } from 'lucide-react';
 
 const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: Home },
+  { path: '/designer', label: 'Song Designer', icon: PenTool, badge: 'NEW' },
   { path: '/songs', label: 'Song Library', icon: Music2, badge: '40+' },
   { path: '/chords', label: 'Chord Book', icon: Library },
   { path: '/tuner', label: 'Guitar Tuner', icon: Mic },

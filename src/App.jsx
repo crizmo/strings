@@ -11,6 +11,7 @@ import Tuner from './components/Tuner/Tuner';
 import ChordSpeedrun from './components/Speedrun/ChordSpeedrun';
 import ChordExplorer from './components/Fretboard/ChordExplorer';
 import StrumStudio from './components/Strumming/StrumStudio';
+import SongDesigner from './components/Designer/SongDesigner';
 import { useAcousticAudio } from './hooks/useAcousticAudio';
 import { TUNINGS } from './data/tunings';
 
@@ -27,6 +28,8 @@ export default function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/songs" element={<SongLibrary />} />
             <Route path="/songs/:songId" element={<SongDetail />} />
+            <Route path="/designer" element={<SongDesigner />} />
+            <Route path="/designer/:songId" element={<SongDesigner />} />
             <Route path="/chords" element={<ChordLibrary />} />
             <Route
               path="/tuner"

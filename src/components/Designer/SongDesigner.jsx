@@ -24,7 +24,6 @@ import {
 } from 'lucide-react';
 import PageHeader from '../shared/PageHeader';
 import GlassCard from '../shared/GlassCard';
-import StrumPatternEditor from './StrumPatternEditor';
 import ChordPalette from './ChordPalette';
 import ChordProEditor from './ChordProEditor';
 import VisualSectionEditor from './VisualSectionEditor';
@@ -850,17 +849,7 @@ export default function SongDesigner() {
           </div>
         </div>
 
-        {/* 2. Interactive Up & Down Strumming Pattern Studio */}
-        <StrumPatternEditor
-          patternId={songData.strumPattern}
-          timeSignature={songData.timeSignature}
-          tempo={songData.tempo}
-          customSteps={songData.customStrumSteps}
-          onChangePattern={handleChangeStrumPattern}
-          sampleChord={detectedChords[0] || 'Em'}
-        />
-
-        {/* 3. Editor Mode Bar */}
+        {/* 2. Editor Mode Bar */}
         <div
           style={{
             display: 'flex',

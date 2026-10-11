@@ -132,6 +132,48 @@ const COMMON_FINGERINGS = {
 };
 
 /**
+ * Returns clean compact finger notation (e.g. "2:A2  3:D2" or "1:D1  2:A2  3:G2  4:e2")
+ */
+export function getChordFingerShorthand(chordName, customChords = []) {
+  if (!chordName) return '';
+  const strNames = ['E', 'A', 'D', 'G', 'B', 'e'];
+  if (COMMON_FINGERINGS[chordName]) {
+    const cf = COMMON_FINGERINGS[chordName];
+    const parts = [];
+    cf.frets.forEach((f, idx) => {
+      const finger = cf.fingers[idx];
+      if (f > 0 && finger) {
+        parts.push(`${finger}:${strNames[idx]}${f}`);
+      }
+    });
+    return parts.join('  ');
+  }
+  const custom = customChords?.find((c) => c.id === chordName || c.name === chordName);
+  if (custom?.fingers && custom?.frets) {
+    const parts = [];
+    custom.frets.forEach((f, idx) => {
+      const finger = custom.fingers[idx];
+      if (f > 0 && finger) {
+        parts.push(`${finger}:${strNames[idx]}${f}`);
+      }
+    });
+    return parts.join('  ');
+  }
+  const found = CHORDS.find((c) => c.id.toLowerCase() === chordName.toLowerCase());
+  if (found && found.fingers && found.frets) {
+    const parts = [];
+    found.frets.forEach((f, idx) => {
+      const finger = found.fingers[idx];
+      if (f > 0 && finger) {
+        parts.push(`${finger}:${strNames[idx]}${f}`);
+      }
+    });
+    return parts.join('  ');
+  }
+  return '';
+}
+
+/**
  * Returns a short 1-line summary of finger positions for any chord name
  */
 export function getChordFingerSummary(chordName, customChords = []) {
@@ -164,6 +206,70 @@ export function getChordFingerSummary(chordName, customChords = []) {
     return parts.join(' • ');
   }
   return '';
+}
+
+/**
+ * Returns an array of length 6 for TAB staff [High e (0), B (1), G (2), D (3), A (4), Low E (5)]
+ * with finger numbers (1, 2, 3, 4) or null.
+ */
+export function getChordFingersForTab(chordName, customChords = []) {
+  if (!chordName) return [null, null, null, null, null, null];
+  let rawFingers = null;
+  if (COMMON_FINGERINGS[chordName]?.fingers) {
+    rawFingers = COMMON_FINGERINGS[chordName].fingers;
+  } else {
+    const custom = customChords?.find((c) => c.id === chordName || c.name === chordName);
+    if (custom?.fingers) {
+      rawFingers = custom.fingers;
+    } else {
+      const found = CHORDS.find((c) => c.id.toLowerCase() === chordName.toLowerCase());
+      if (found?.fingers) {
+        rawFingers = found.fingers;
+      }
+    }
+  }
+
+  if (!rawFingers) return [null, null, null, null, null, null];
+  return [
+    rawFingers[5] ?? null,
+    rawFingers[4] ?? null,
+    rawFingers[3] ?? null,
+    rawFingers[2] ?? null,
+    rawFingers[1] ?? null,
+    rawFingers[0] ?? null,
+  ];
+}
+
+/**
+ * Returns an array of length 6 for TAB staff [High e (0), B (1), G (2), D (3), A (4), Low E (5)]
+ * with fret numbers (0..12, or -1 for muted/unplayed).
+ */
+export function getChordFretsForTab(chordName, customChords = []) {
+  if (!chordName) return [0, 0, 0, 0, 0, 0];
+  let rawFrets = null;
+  if (COMMON_FINGERINGS[chordName]?.frets) {
+    rawFrets = COMMON_FINGERINGS[chordName].frets;
+  } else {
+    const custom = customChords?.find((c) => c.id === chordName || c.name === chordName);
+    if (custom?.frets) {
+      rawFrets = custom.frets;
+    } else {
+      const found = CHORDS.find((c) => c.id.toLowerCase() === chordName.toLowerCase());
+      if (found?.frets) {
+        rawFrets = found.frets;
+      }
+    }
+  }
+
+  if (!rawFrets) return [0, 0, 0, 0, 0, 0];
+  return [
+    rawFrets[5] ?? null,
+    rawFrets[4] ?? null,
+    rawFrets[3] ?? null,
+    rawFrets[2] ?? null,
+    rawFrets[1] ?? null,
+    rawFrets[0] ?? null,
+  ];
 }
 
 export default function ChordFingerPopover({

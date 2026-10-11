@@ -26,7 +26,42 @@ import {
   TAB_STRING_NAMES,
 } from '../../utils/tabAudio';
 import { CHORDS } from '../../data/chords';
-import ChordFingerPopover from './ChordFingerPopover';
+import ChordFingerPopover, {
+  getChordFingerShorthand,
+  getChordFingersForTab,
+  getChordFretsForTab,
+} from './ChordFingerPopover';
+
+/**
+ * Helper to get all notes on a beat as an array of { string, fret }
+ * Supports 1, 2, 3, 4, 5, or all 6 strings played simultaneously on the same beat
+ */
+export function getBeatNotes(beat) {
+  if (!beat) return [];
+  const notes = [];
+  if (beat.string !== undefined && beat.string !== null && beat.fret !== undefined && beat.fret !== null && beat.fret >= 0) {
+    notes.push({ string: beat.string, fret: beat.fret });
+  }
+  if (Array.isArray(beat.chordNotes)) {
+    beat.chordNotes.forEach((cn) => {
+      if (cn && cn.string !== undefined && cn.string !== null && cn.fret !== undefined && cn.fret !== null && cn.fret >= 0) {
+        if (!notes.some((n) => n.string === cn.string)) {
+          notes.push({ string: cn.string, fret: cn.fret });
+        }
+      }
+    });
+  }
+  return notes;
+}
+
+/**
+ * Helper to get the fret for a specific string on a beat
+ */
+export function getBeatNoteFretForString(beat, strIdx) {
+  const notes = getBeatNotes(beat);
+  const found = notes.find((n) => n.string === strIdx);
+  return found !== undefined && found !== null ? found.fret : null;
+}
 
 export default function InteractiveTabStaff({
   measures = [],
@@ -40,6 +75,7 @@ export default function InteractiveTabStaff({
   const [currentMeasureIdx, setCurrentMeasureIdx] = useState(0);
   const [currentBeatIdx, setCurrentBeatIdx] = useState(0);
   const [activeCell, setActiveCell] = useState(null); // { mIdx, bIdx, strIdx }
+  const [activeFingerSlot, setActiveFingerSlot] = useState(null); // { mIdx, strIdx }
   const [popoverChord, setPopoverChord] = useState(null); // { chordName, mIdx, isModal }
 
   const playbackTimerRef = useRef(null);
@@ -88,17 +124,11 @@ export default function InteractiveTabStaff({
             playPercussiveHit();
           }
 
-          // 2. Tab Note plucks
-          if (beatNote.fret !== undefined && beatNote.fret !== null && beatNote.fret >= 0) {
-            playTabNote(beatNote.string, beatNote.fret, capo, 0.75);
-          }
-          if (beatNote.chordNotes && Array.isArray(beatNote.chordNotes)) {
-            beatNote.chordNotes.forEach((extra) => {
-              if (extra.fret !== undefined && extra.fret !== null && extra.fret >= 0) {
-                playTabNote(extra.string, extra.fret, capo, 0.7);
-              }
-            });
-          }
+          // 2. Tab Note plucks (plays all simultaneous notes: 1, 2, 3, 4, 5, or 6 strings together)
+          const allNotes = getBeatNotes(beatNote);
+          allNotes.forEach((n) => {
+            playTabNote(n.string, n.fret, capo, 0.72);
+          });
         }
 
         return nextBeat;
@@ -113,39 +143,120 @@ export default function InteractiveTabStaff({
   // Click note cell to set fret
   const handleCellClick = (mIdx, bIdx, strIdx, existingFret) => {
     setActiveCell({ mIdx, bIdx, strIdx });
+    setActiveFingerSlot(null);
     if (existingFret !== undefined && existingFret !== null && existingFret >= 0) {
       playTabNote(strIdx, existingFret, capo);
     }
   };
 
-  // Set fret on active cell
+  // Set fret on active cell (supports 1, 2, 3, 4, 5, or all 6 strings played simultaneously on the same beat!)
   const handleSetFret = (fretVal) => {
     if (!activeCell) return;
     const { mIdx, bIdx, strIdx } = activeCell;
     const updated = [...measures];
     const targetMeasure = { ...updated[mIdx] };
     const targetBeats = [...(targetMeasure.beats || [])];
-    const existing = targetBeats[bIdx] || {};
+    const existing = { ...(targetBeats[bIdx] || {}) };
+
+    let notes = getBeatNotes(existing);
 
     if (fretVal === null) {
-      // Clear note fret but preserve strum if any
-      if (existing.strum) {
-        targetBeats[bIdx] = { strum: existing.strum };
-      } else {
-        targetBeats[bIdx] = {};
-      }
+      // Clear note on this string
+      notes = notes.filter((n) => n.string !== strIdx);
     } else {
-      targetBeats[bIdx] = {
-        ...existing,
-        string: strIdx,
-        fret: fretVal,
-      };
+      // Add or update note on this string
+      const existingIdx = notes.findIndex((n) => n.string === strIdx);
+      if (existingIdx >= 0) {
+        notes[existingIdx] = { string: strIdx, fret: fretVal };
+      } else {
+        notes.push({ string: strIdx, fret: fretVal });
+      }
       playTabNote(strIdx, fretVal, capo);
     }
 
+    // Keep notes sorted by string index (Low E [5] down to High e [0])
+    notes.sort((a, b) => b.string - a.string);
+
+    const newBeat = {};
+    if (existing.strum) {
+      newBeat.strum = existing.strum;
+    }
+
+    if (notes.length > 0) {
+      newBeat.string = notes[0].string;
+      newBeat.fret = notes[0].fret;
+      if (notes.length > 1) {
+        newBeat.chordNotes = notes.slice(1);
+      }
+    }
+
+    targetBeats[bIdx] = newBeat;
     targetMeasure.beats = targetBeats;
     updated[mIdx] = targetMeasure;
     onChangeMeasures(updated);
+  };
+
+  // Clear all notes on the active beat
+  const handleClearAllBeatNotes = () => {
+    if (!activeCell) return;
+    const { mIdx, bIdx } = activeCell;
+    const updated = [...measures];
+    const targetMeasure = { ...updated[mIdx] };
+    const targetBeats = [...(targetMeasure.beats || [])];
+    const existing = targetBeats[bIdx] || {};
+
+    targetBeats[bIdx] = existing.strum ? { strum: existing.strum } : {};
+    targetMeasure.beats = targetBeats;
+    updated[mIdx] = targetMeasure;
+    onChangeMeasures(updated);
+  };
+
+  // Fill chord notes across strings on active beat (e.g. 3, 4, 5, or 6 notes played together!)
+  const handleFillChordNotesOnBeat = () => {
+    if (!activeCell) return;
+    const { mIdx, bIdx } = activeCell;
+    const targetMeasure = measures[mIdx];
+    const chordName = targetMeasure?.chord || 'Em';
+
+    const allChords = [...customChords, ...CHORDS];
+    const chordData = allChords.find(
+      (c) => c.id.toLowerCase() === chordName.toLowerCase() || c.name.toLowerCase().startsWith(chordName.toLowerCase())
+    );
+    const frets = chordData?.frets || [0, 2, 2, 0, 0, 0]; // [Low E..High E]
+
+    const notes = [];
+    frets.forEach((f, chordIdx) => {
+      const strIdx = 5 - chordIdx;
+      if (f !== null && f !== undefined && f >= 0) {
+        notes.push({ string: strIdx, fret: f });
+      }
+    });
+
+    if (notes.length === 0) return;
+
+    // Sort notes by string
+    notes.sort((a, b) => b.string - a.string);
+
+    const updated = [...measures];
+    const measureCopy = { ...updated[mIdx] };
+    const beatsCopy = [...(measureCopy.beats || [])];
+    const existing = beatsCopy[bIdx] || {};
+
+    const newBeat = {
+      strum: existing.strum || 'down',
+      string: notes[0].string,
+      fret: notes[0].fret,
+    };
+    if (notes.length > 1) {
+      newBeat.chordNotes = notes.slice(1);
+    }
+
+    beatsCopy[bIdx] = newBeat;
+    measureCopy.beats = beatsCopy;
+    updated[mIdx] = measureCopy;
+    onChangeMeasures(updated);
+
+    playTabStrum(chordName, 'down', capo, tempo, 0.75, customChords, CHORDS);
   };
 
   // Dynamic Beat Addition: Add an extra beat to a measure
@@ -273,15 +384,108 @@ export default function InteractiveTabStaff({
     }
   };
 
-  // Change measure chord
+  // Get finger positions array [str0..str5] (High e to Low E) for a measure
+  const getMeasureFingers = (measure) => {
+    if (Array.isArray(measure?.fingers)) {
+      return measure.fingers;
+    }
+    return getChordFingersForTab(measure?.chord || 'Em', customChords);
+  };
+
+  // Get fret positions array [str0..str5] (High e to Low E) for a measure
+  const getMeasureFrets = (measure) => {
+    if (Array.isArray(measure?.chordFrets)) {
+      return measure.chordFrets;
+    }
+    return getChordFretsForTab(measure?.chord || 'Em', customChords);
+  };
+
+  // Change measure chord and recalculate default finger & fret slots
   const handleChangeMeasureChord = (mIdx, newChord) => {
     const updated = [...measures];
+    const defaultFingers = getChordFingersForTab(newChord, customChords);
+    const defaultFrets = getChordFretsForTab(newChord, customChords);
     updated[mIdx] = {
       ...updated[mIdx],
       chord: newChord,
+      fingers: defaultFingers,
+      chordFrets: defaultFrets,
+      fingerGuide: getChordFingerShorthand(newChord, customChords),
     };
     onChangeMeasures(updated);
   };
+
+  // Set finger number (1, 2, 3, 4 or null) for a specific string on a measure
+  const handleSetMeasureFinger = (mIdx, strIdx, fingerVal) => {
+    const updated = [...measures];
+    const targetMeasure = { ...updated[mIdx] };
+    const curFingers = [...getMeasureFingers(targetMeasure)];
+    curFingers[strIdx] = fingerVal;
+    targetMeasure.fingers = curFingers;
+    updated[mIdx] = targetMeasure;
+    onChangeMeasures(updated);
+  };
+
+  // Set fret number (0..12 or -1) for a specific string on a measure
+  const handleSetMeasureChordFret = (mIdx, strIdx, fretVal) => {
+    const updated = [...measures];
+    const targetMeasure = { ...updated[mIdx] };
+    const curFrets = [...getMeasureFrets(targetMeasure)];
+    curFrets[strIdx] = fretVal;
+    targetMeasure.chordFrets = curFrets;
+    updated[mIdx] = targetMeasure;
+    onChangeMeasures(updated);
+  };
+
+  // Cycle finger on string: null -> 1 -> 2 -> 3 -> 4 -> null
+  const handleCycleMeasureFinger = (mIdx, strIdx) => {
+    const targetMeasure = measures[mIdx];
+    const curFingers = getMeasureFingers(targetMeasure);
+    const cur = curFingers[strIdx];
+    let nextVal = null;
+    if (cur === null || cur === undefined) nextVal = 1;
+    else if (cur === 1) nextVal = 2;
+    else if (cur === 2) nextVal = 3;
+    else if (cur === 3) nextVal = 4;
+    else nextVal = null;
+
+    handleSetMeasureFinger(mIdx, strIdx, nextVal);
+    setActiveFingerSlot({ mIdx, strIdx });
+    setActiveCell(null);
+  };
+
+  // Keyboard shortcut listener for active finger slot
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!activeFingerSlot) return;
+      if (['1', '2', '3', '4'].includes(e.key)) {
+        handleSetMeasureFinger(activeFingerSlot.mIdx, activeFingerSlot.strIdx, parseInt(e.key, 10));
+      } else if (['0', 'Backspace', 'Delete', 'c', 'C'].includes(e.key)) {
+        handleSetMeasureFinger(activeFingerSlot.mIdx, activeFingerSlot.strIdx, null);
+      } else if (e.key === 'Escape') {
+        setActiveFingerSlot(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeFingerSlot, measures, customChords]);
+
+  // Keyboard shortcut listener for active note cell
+  useEffect(() => {
+    const handleNoteKeyDown = (e) => {
+      if (!activeCell) return;
+      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'].includes(e.key)) {
+        handleSetFret(parseInt(e.key, 10));
+      } else if (['Backspace', 'Delete', 'c', 'C'].includes(e.key)) {
+        handleSetFret(null);
+      } else if (e.key === 'Escape') {
+        setActiveCell(null);
+      }
+    };
+    window.addEventListener('keydown', handleNoteKeyDown);
+    return () => window.removeEventListener('keydown', handleNoteKeyDown);
+  }, [activeCell, measures, capo]);
 
   // Auto-Arpeggiate measure based on its chord
   const handleAutoArpeggiate = (mIdx) => {
@@ -542,80 +746,6 @@ export default function InteractiveTabStaff({
         </div>
       </div>
 
-      {/* Hotel California 8-Chunk Lesson Guide */}
-      <div
-        style={{
-          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-          borderRadius: 'var(--radius-lg)',
-          border: '1px solid var(--border-default)',
-          padding: '1.25rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '1.1rem' }}>🦅</span>
-            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '0.98rem', color: 'var(--text-primary)' }}>
-              Hotel California Intro — 8 Chunks Breakdown (Capo 7th Fret)
-            </span>
-          </div>
-          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--accent-primary)', background: '#ffffff', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-default)' }}>
-            Capo 7 • Directional Picking • Dynamic Beats & Strumming
-          </span>
-        </div>
-
-        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '0.85rem' }}>
-          As an absolute beginner, the key is taking it one chunk at a time. Each chunk can now have <strong>more than 8 beats</strong> using the <strong>[+]</strong> button, and you can add <strong>Strum Patterns (Down ↓, Up ↑, Hit ✕)</strong> directly above each beat! Click any chunk below to jump:
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.6rem' }}>
-          {[
-            { num: 1, chord: 'E minor', time: '2:36', desc: 'Pick 3rd from top, 3rd from bottom, 3rd from top, 2nd from bottom. Release ring & strum 3rd & 2nd from bottom together.' },
-            { num: 2, chord: 'B7', time: '6:55', desc: 'Index 1st fret (3rd from top), Middle 2nd fret (2nd from top), Ring 2nd fret (3rd from bottom), Pinky 2nd fret (bottom).' },
-            { num: 3, chord: 'Dsus2', time: '10:25', desc: 'Index on 2nd fret (3rd from bottom), Ring on 3rd fret (2nd from bottom). Steady picking across treble strings.' },
-            { num: 4, chord: 'A9 variation', time: '13:50', desc: 'Ring on 4th fret (2nd from top), Index on 2nd fret (3rd from top). Focus on smooth melodic flow.' },
-            { num: 5, chord: 'C major', time: '18:03', desc: 'Standard C. End with open bottom string & hammer-on with middle finger to 2nd fret of 3rd string from top.' },
-            { num: 6, chord: 'G major', time: '20:06', desc: 'Ring 3rd fret (bottom), Middle 3rd fret (top), Index 2nd fret (2nd from top). Keep picking steady.' },
-            { num: 7, chord: 'A minor 7', time: '23:00', desc: 'Index on 1st fret (2nd from bottom), Middle on 2nd fret (3rd from top). Classic melodic pattern.' },
-            { num: 8, chord: 'B7 return', time: '24:25', desc: 'Return to B7 shape from Chunk #2 to close the intro.' },
-          ].map((chunk) => {
-            const isTarget = currentMeasureIdx === chunk.num - 1;
-            return (
-              <div
-                key={chunk.num}
-                onClick={() => {
-                  setCurrentMeasureIdx(chunk.num - 1);
-                  setCurrentBeatIdx(0);
-                  const m = measures[chunk.num - 1];
-                  if (m?.beats?.[0]?.fret !== undefined) {
-                    playTabNote(m.beats[0].string, m.beats[0].fret, capo);
-                  }
-                }}
-                style={{
-                  background: isTarget ? 'var(--accent-primary-subtle)' : '#ffffff',
-                  border: isTarget ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-default)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '0.65rem 0.85rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: isTarget ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
-                    Chunk #{chunk.num} ({chunk.chord})
-                  </span>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-dim)' }}>
-                    {chunk.time}
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
-                  {chunk.desc}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Quick Fret & Strum Placement Toolbar for active clicked cell */}
       {activeCell && (
         <div
@@ -631,16 +761,47 @@ export default function InteractiveTabStaff({
         >
           {/* Top row: Cell info & Note Frets */}
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--accent-primary)' }}>
                 Measure {activeCell.mIdx + 1}, Beat {activeCell.bIdx + 1}, String {TAB_STRING_NAMES[activeCell.strIdx]}:
               </span>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                 Place Note Fret:
               </span>
+
+              {/* Multi-note badges showing all simultaneous notes on this beat */}
+              {(() => {
+                const currentBeatNotes = getBeatNotes(measures[activeCell.mIdx]?.beats?.[activeCell.bIdx]);
+                if (currentBeatNotes.length > 1) {
+                  return (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.35rem' }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#4338ca' }}>
+                        🎵 {currentBeatNotes.length} notes together:
+                      </span>
+                      {currentBeatNotes.map((n, i) => (
+                        <span
+                          key={i}
+                          style={{
+                            background: n.string === activeCell.strIdx ? '#dbeafe' : '#ffffff',
+                            border: n.string === activeCell.strIdx ? '1.5px solid #2563eb' : '1px solid #cbd5e1',
+                            borderRadius: '4px',
+                            padding: '1px 5px',
+                            fontWeight: 800,
+                            fontSize: '0.72rem',
+                            color: n.string === activeCell.strIdx ? '#1d4ed8' : '#334155',
+                          }}
+                        >
+                          {TAB_STRING_NAMES[n.string]}:{n.fret}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', flexWrap: 'wrap' }}>
               {[0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 12].map((f) => (
                 <button
                   key={f}
@@ -660,6 +821,7 @@ export default function InteractiveTabStaff({
                   {f}
                 </button>
               ))}
+
               <button
                 type="button"
                 onClick={() => handleSetFret(null)}
@@ -673,9 +835,48 @@ export default function InteractiveTabStaff({
                   fontWeight: 700,
                   cursor: 'pointer',
                 }}
+                title="Remove note from this string only"
               >
-                Clear Note
+                Clear String
               </button>
+
+              <button
+                type="button"
+                onClick={handleFillChordNotesOnBeat}
+                style={{
+                  padding: '0.25rem 0.65rem',
+                  borderRadius: 'var(--radius-xs)',
+                  border: '1px solid #86efac',
+                  background: '#f0fdf4',
+                  color: '#15803d',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
+                title={`Fill all notes of ${measures[activeCell.mIdx]?.chord || 'Chord'} on this beat simultaneously`}
+              >
+                🎸 Fill Chord ({measures[activeCell.mIdx]?.chord || 'Chord'})
+              </button>
+
+              {getBeatNotes(measures[activeCell.mIdx]?.beats?.[activeCell.bIdx]).length > 1 && (
+                <button
+                  type="button"
+                  onClick={handleClearAllBeatNotes}
+                  style={{
+                    padding: '0.25rem 0.65rem',
+                    borderRadius: 'var(--radius-xs)',
+                    border: '1px solid #fecaca',
+                    background: '#fff1f2',
+                    color: '#991b1b',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                  title="Clear all simultaneous notes on this beat"
+                >
+                  Clear All Notes
+                </button>
+              )}
             </div>
           </div>
 
@@ -846,6 +1047,183 @@ export default function InteractiveTabStaff({
         </div>
       )}
 
+      {/* Quick Finger & Fret Placement Toolbar when a chord string slot is active */}
+      {activeFingerSlot && !activeCell && (
+        <div
+          style={{
+            background: '#eff6ff',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid #bfdbfe',
+            padding: '0.85rem 1.25rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.65rem',
+          }}
+        >
+          {(() => {
+            const curMeasure = measures[activeFingerSlot.mIdx];
+            const curFret = getMeasureFrets(curMeasure)[activeFingerSlot.strIdx];
+            const curFinger = getMeasureFingers(curMeasure)[activeFingerSlot.strIdx];
+
+            return (
+              <>
+                {/* Header */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '1.05rem' }}>🖐️</span>
+                    <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#1e40af' }}>
+                      Chunk #{activeFingerSlot.mIdx + 1} ({curMeasure?.chord || 'Chord'})
+                      — String {TAB_STRING_NAMES[activeFingerSlot.strIdx]} Position:
+                    </span>
+                    <span style={{ fontSize: '0.78rem', color: '#1d4ed8', fontWeight: 700, background: '#dbeafe', padding: '0.15rem 0.5rem', borderRadius: '4px' }}>
+                      Fret: {curFret === -1 ? 'Muted (✕)' : curFret === 0 ? '0 (Open)' : curFret} • Finger: {curFinger ? `${curFinger}` : 'None'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveFingerSlot(null)}
+                    style={{
+                      padding: '0.28rem 0.75rem',
+                      borderRadius: 'var(--radius-xs)',
+                      border: '1px solid #cbd5e1',
+                      background: '#ffffff',
+                      color: '#475569',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Done
+                  </button>
+                </div>
+
+                {/* Row 1: Select Fret for this chord string */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', borderTop: '1px dashed #bfdbfe', paddingTop: '0.5rem' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e40af', minWidth: '45px' }}>
+                    Fret:
+                  </span>
+                  {[0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 12].map((f) => {
+                    const isFretActive = curFret === f;
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        onClick={() => handleSetMeasureChordFret(activeFingerSlot.mIdx, activeFingerSlot.strIdx, f)}
+                        style={{
+                          padding: '0.22rem 0.6rem',
+                          borderRadius: 'var(--radius-xs)',
+                          border: isFretActive ? '2px solid #2563eb' : '1px solid #bfdbfe',
+                          background: isFretActive ? '#2563eb' : '#ffffff',
+                          color: isFretActive ? '#ffffff' : '#1e3a8a',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {f === 0 ? '0 (Open)' : f}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => handleSetMeasureChordFret(activeFingerSlot.mIdx, activeFingerSlot.strIdx, -1)}
+                    style={{
+                      padding: '0.22rem 0.6rem',
+                      borderRadius: 'var(--radius-xs)',
+                      border: curFret === -1 ? '2px solid #dc2626' : '1px solid #fecaca',
+                      background: curFret === -1 ? '#dc2626' : '#fef2f2',
+                      color: curFret === -1 ? '#ffffff' : '#b91c1c',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}
+                    title="Mute string (do not play)"
+                  >
+                    ✕ Mute
+                  </button>
+                </div>
+
+                {/* Row 2: Select Finger for this chord string */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#1e40af', minWidth: '45px' }}>
+                    Finger:
+                  </span>
+                  {[
+                    { val: 1, label: '1 (Index)' },
+                    { val: 2, label: '2 (Middle)' },
+                    { val: 3, label: '3 (Ring)' },
+                    { val: 4, label: '4 (Pinky)' },
+                  ].map(({ val, label }) => {
+                    const isFingerActive = curFinger === val;
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => handleSetMeasureFinger(activeFingerSlot.mIdx, activeFingerSlot.strIdx, val)}
+                        style={{
+                          padding: '0.22rem 0.65rem',
+                          borderRadius: 'var(--radius-xs)',
+                          border: isFingerActive ? '2px solid #2563eb' : '1px solid #bfdbfe',
+                          background: isFingerActive ? '#2563eb' : '#ffffff',
+                          color: isFingerActive ? '#ffffff' : '#1e3a8a',
+                          fontSize: '0.78rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => handleSetMeasureFinger(activeFingerSlot.mIdx, activeFingerSlot.strIdx, null)}
+                    style={{
+                      padding: '0.22rem 0.6rem',
+                      borderRadius: 'var(--radius-xs)',
+                      border: '1px solid #cbd5e1',
+                      background: '#ffffff',
+                      color: '#64748b',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Clear Finger
+                  </button>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Minimal Finger Position Notation Legend */}
+      <div
+        style={{
+          fontSize: '0.72rem',
+          color: 'var(--text-secondary)',
+          background: 'linear-gradient(90deg, #f8fafc 0%, #eff6ff 100%)',
+          border: '1px solid #e2e8f0',
+          borderRadius: 'var(--radius-md)',
+          padding: '0.35rem 0.85rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.45rem',
+          flexWrap: 'wrap',
+          marginBottom: '0.75rem',
+        }}
+      >
+        <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>🖐️ Chord Position Guide:</span>
+        <span style={{ fontWeight: 800, color: '#0f172a' }}>Fret Number</span>
+        <span style={{ color: '#94a3b8' }}>|</span>
+        <span style={{ fontWeight: 800, color: '#1e40af' }}>Finger (1=Index, 2=Middle, 3=Ring, 4=Pinky)</span>
+        <span style={{ color: 'var(--text-dim)', marginLeft: '4px' }}>
+          (Shown on each string before the chunk's barline. Click any string to edit both fret and finger!)
+        </span>
+      </div>
+
       {/* THE TABLATURE STAFF */}
       <div
         style={{
@@ -889,6 +1267,7 @@ export default function InteractiveTabStaff({
                   return (
                     <div
                       key={m.measureNum}
+                      id={`staff-measure-${absoluteMIdx}`}
                       style={{
                         paddingLeft: '10px',
                         paddingRight: '6px',
@@ -1221,6 +1600,8 @@ export default function InteractiveTabStaff({
                   const absoluteMIdx = rowStartMeasureIdx + mInRowIdx;
                   const isMeasureActive = isPlaying && currentMeasureIdx === absoluteMIdx;
                   const totalBeats = measure.beats?.length || 8;
+                  const measureFingers = getMeasureFingers(measure);
+                  const measureFrets = getMeasureFrets(measure);
 
                   return (
                     <div
@@ -1230,214 +1611,396 @@ export default function InteractiveTabStaff({
                         height: '124px', // 24px strum bar + 100px staff lines
                         borderLeft: '1px solid #000000',
                         display: 'flex',
-                        flexDirection: 'column',
+                        flexDirection: 'row',
                       }}
                     >
-                      {/* 1. Strum Pattern Bar Row (Above the strings) */}
+                      {/* Left: Fret & Finger Position Column (Placed on strings BEFORE the notes line!) */}
                       <div
                         style={{
-                          height: '24px',
-                          display: 'grid',
-                          gridTemplateColumns: `repeat(${totalBeats}, 1fr)`,
-                          alignItems: 'center',
-                          borderBottom: '1px dashed #e2e8f0',
-                          background: '#fafafa',
+                          width: '46px',
+                          flexShrink: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          borderRight: '1.5px solid #000000',
+                          background: '#f8fafc',
                         }}
                       >
-                        {Array.from({ length: totalBeats }).map((_, bIdx) => {
-                          const beat = measure.beats?.[bIdx] || {};
-                          const strum = beat.strum;
-                          const isBeatActive = isMeasureActive && currentBeatIdx === bIdx;
+                        {/* Strum Row Header for Fret & Finger Column */}
+                        <div
+                          title="Chord positions for this chunk (Fret | Finger). Click any string to edit in toolbar!"
+                          style={{
+                            height: '24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderBottom: '1px dashed #e2e8f0',
+                            fontSize: '0.60rem',
+                            color: '#64748b',
+                            fontWeight: 800,
+                            userSelect: 'none',
+                            letterSpacing: '0.02em',
+                          }}
+                        >
+                          Fr · 🖐️
+                        </div>
 
-                          return (
+                        {/* Staff Lines with Fret & Finger Badges on each string */}
+                        <div
+                          style={{
+                            position: 'relative',
+                            height: '100px',
+                          }}
+                        >
+                          {/* 6 horizontal black staff lines */}
+                          {[0, 1, 2, 3, 4, 5].map((lineIdx) => (
                             <div
-                              key={bIdx}
+                              key={lineIdx}
                               style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                height: '100%',
+                                position: 'absolute',
+                                left: 0,
+                                right: 0,
+                                top: `${lineIdx * 20}px`,
+                                height: '1px',
+                                background: '#000000',
+                                pointerEvents: 'none',
                               }}
-                            >
-                              <button
-                                type="button"
-                                onClick={() => handleToggleBeatStrum(absoluteMIdx, bIdx)}
-                                title={`Beat ${bIdx + 1}: ${strum ? strum.toUpperCase() : 'No strum'} (click to cycle Down, Up, Hit, Miss)`}
+                            />
+                          ))}
+
+                          {/* 6 String Position Slots (Fret | Finger) */}
+                          {[0, 1, 2, 3, 4, 5].map((strIdx) => {
+                            const fingerVal = measureFingers[strIdx];
+                            const fretVal = measureFrets[strIdx];
+                            const isSlotActive =
+                              activeFingerSlot?.mIdx === absoluteMIdx &&
+                              activeFingerSlot?.strIdx === strIdx;
+
+                            const isMuted = fretVal === -1;
+                            const hasFinger = fingerVal !== null && fingerVal !== undefined;
+
+                            return (
+                              <div
+                                key={strIdx}
+                                onClick={() => {
+                                  if (activeFingerSlot?.mIdx === absoluteMIdx && activeFingerSlot?.strIdx === strIdx) {
+                                    handleCycleMeasureFinger(absoluteMIdx, strIdx);
+                                  } else {
+                                    setActiveFingerSlot({ mIdx: absoluteMIdx, strIdx });
+                                    setActiveCell(null);
+                                  }
+                                }}
+                                title={`String ${TAB_STRING_NAMES[strIdx]}: Fret ${isMuted ? 'Muted (✕)' : fretVal ?? 0}, Finger ${fingerVal || 'None'}. Click to select & edit fret or finger!`}
                                 style={{
-                                  border: 'none',
-                                  background: strum === 'down'
-                                    ? '#e0e7ff'
-                                    : strum === 'up'
-                                    ? '#dcfce7'
-                                    : strum === 'hit'
-                                    ? '#ffedd5'
-                                    : strum === 'rest'
-                                    ? '#f1f5f9'
-                                    : 'transparent',
-                                  color: strum === 'down'
-                                    ? '#4338ca'
-                                    : strum === 'up'
-                                    ? '#15803d'
-                                    : strum === 'hit'
-                                    ? '#c2410c'
-                                    : strum === 'rest'
-                                    ? '#64748b'
-                                    : '#94a3b8',
-                                  borderRadius: 'var(--radius-xs)',
-                                  padding: '1px 3px',
-                                  cursor: 'pointer',
+                                  position: 'absolute',
+                                  top: `${strIdx * 20 - 9}px`,
+                                  left: '3px',
+                                  width: '40px',
+                                  height: '18px',
+                                  borderRadius: '9px',
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
-                                  fontSize: '0.66rem',
-                                  fontWeight: 800,
-                                  minWidth: '18px',
-                                  height: '18px',
-                                  boxShadow: isBeatActive && strum ? '0 0 6px rgba(99, 102, 241, 0.4)' : 'none',
-                                  transform: isBeatActive && strum ? 'scale(1.15)' : 'none',
-                                  transition: 'transform 0.1s ease',
+                                  gap: '2px',
+                                  cursor: 'pointer',
+                                  zIndex: 6,
+                                  background: isSlotActive
+                                    ? '#dbeafe'
+                                    : hasFinger || fretVal > 0
+                                    ? '#eff6ff'
+                                    : '#ffffff',
+                                  border: isSlotActive
+                                    ? '2px solid #2563eb'
+                                    : hasFinger || fretVal > 0
+                                    ? '1.5px solid #3b82f6'
+                                    : isMuted
+                                    ? '1.5px solid #f87171'
+                                    : '1px solid #cbd5e1',
+                                  boxShadow: isSlotActive
+                                    ? '0 0 0 2.5px rgba(37,99,235,0.35)'
+                                    : hasFinger
+                                    ? '0 1px 2px rgba(37,99,235,0.1)'
+                                    : 'none',
+                                  userSelect: 'none',
+                                  transition: 'all 0.1s ease',
+                                  padding: '0 2px',
                                 }}
                               >
-                                {strum === 'down' && (
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                                    <ArrowDown size={11} strokeWidth={3} />
-                                    <span>D</span>
-                                  </span>
-                                )}
-                                {strum === 'up' && (
-                                  <span style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
-                                    <ArrowUp size={11} strokeWidth={3} />
-                                    <span>U</span>
-                                  </span>
-                                )}
-                                {strum === 'hit' && <span>✕</span>}
-                                {strum === 'rest' && <span>—</span>}
-                                {!strum && <span style={{ opacity: 0.35, fontSize: '0.62rem' }}>·</span>}
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* 2. Staff Notes Area (100px height with 6 horizontal lines) */}
-                      <div
-                        style={{
-                          position: 'relative',
-                          height: '100px',
-                          display: 'grid',
-                          gridTemplateColumns: `repeat(${totalBeats}, 1fr)`,
-                        }}
-                      >
-                        {/* The 6 horizontal black staff lines */}
-                        {[0, 1, 2, 3, 4, 5].map((lineIdx) => (
-                          <div
-                            key={lineIdx}
-                            style={{
-                              position: 'absolute',
-                              left: 0,
-                              right: 0,
-                              top: `${lineIdx * 20}px`,
-                              height: '1px',
-                              background: '#000000',
-                              pointerEvents: 'none',
-                            }}
-                          />
-                        ))}
-
-                        {/* Subdivision Beat Columns */}
-                        {Array.from({ length: totalBeats }).map((_, bIdx) => {
-                          const isBeatActive = isMeasureActive && currentBeatIdx === bIdx;
-                          const beatNote = measure.beats?.[bIdx];
-
-                          return (
-                            <div
-                              key={bIdx}
-                              style={{
-                                position: 'relative',
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                              }}
-                            >
-                              {/* ACTIVE PLAYHEAD CURSOR */}
-                              {isBeatActive && (
-                                <div
+                                {/* Fret display */}
+                                <span
                                   style={{
-                                    position: 'absolute',
-                                    inset: '-26px -3px -30px -3px',
-                                    border: '2px solid rgba(220, 38, 38, 0.45)',
-                                    borderRadius: '8px',
-                                    background: 'rgba(34, 197, 94, 0.12)',
-                                    pointerEvents: 'none',
-                                    zIndex: 10,
-                                    boxShadow: '0 0 14px rgba(34, 197, 94, 0.25)',
+                                    fontFamily: 'var(--font-heading)',
+                                    fontWeight: 800,
+                                    fontSize: '0.68rem',
+                                    color: isMuted ? '#dc2626' : fretVal > 0 ? '#1d4ed8' : '#64748b',
+                                    lineHeight: 1,
                                   }}
-                                />
-                              )}
+                                >
+                                  {isMuted ? '✕' : fretVal !== undefined && fretVal !== null ? fretVal : '0'}
+                                </span>
 
-                              {/* 6 Clickable string points for this beat */}
-                              {[0, 1, 2, 3, 4, 5].map((strIdx) => {
-                                const isMainNote = beatNote?.string === strIdx && beatNote?.fret !== undefined;
-                                const isChordExtra = beatNote?.chordNotes?.find((cn) => cn.string === strIdx);
-                                const noteToDisplay = isMainNote ? beatNote : isChordExtra;
-                                const isCellSelected =
-                                  activeCell?.mIdx === absoluteMIdx &&
-                                  activeCell?.bIdx === bIdx &&
-                                  activeCell?.strIdx === strIdx;
+                                {/* Divider */}
+                                <span
+                                  style={{
+                                    fontSize: '0.52rem',
+                                    color: '#94a3b8',
+                                    lineHeight: 1,
+                                    opacity: 0.8,
+                                  }}
+                                >
+                                  |
+                                </span>
 
-                                return (
-                                  <div
-                                    key={strIdx}
-                                    onClick={() =>
-                                      handleCellClick(
-                                        absoluteMIdx,
-                                        bIdx,
-                                        strIdx,
-                                        noteToDisplay?.fret
-                                      )
-                                    }
+                                {/* Finger circle badge */}
+                                {hasFinger ? (
+                                  <span
                                     style={{
-                                      position: 'absolute',
-                                      top: `${strIdx * 20 - 9}px`,
-                                      width: '18px',
-                                      height: '18px',
-                                      borderRadius: '3px',
-                                      display: 'flex',
+                                      minWidth: '12px',
+                                      height: '12px',
+                                      borderRadius: '6px',
+                                      background: '#2563eb',
+                                      color: '#ffffff',
+                                      display: 'inline-flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      cursor: 'pointer',
-                                      zIndex: 5,
-                                      background: noteToDisplay
-                                        ? '#ffffff'
-                                        : isCellSelected
-                                        ? 'var(--accent-primary-subtle)'
-                                        : 'transparent',
-                                      border: isCellSelected
-                                        ? '1.5px solid var(--accent-primary)'
-                                        : 'none',
-                                      userSelect: 'none',
+                                      fontFamily: 'var(--font-heading)',
+                                      fontWeight: 800,
+                                      fontSize: '0.58rem',
+                                      lineHeight: 1,
+                                      padding: '0 1px',
                                     }}
                                   >
-                                    {noteToDisplay && (
-                                      <span
-                                        style={{
-                                          fontFamily: 'var(--font-heading)',
-                                          fontWeight: 800,
-                                          fontSize: '0.88rem',
-                                          color: isBeatActive ? '#15803d' : '#000000',
-                                          lineHeight: 1,
-                                        }}
-                                      >
-                                        {noteToDisplay.fret}
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })}
+                                    {fingerVal}
+                                  </span>
+                                ) : (
+                                  <span
+                                    style={{
+                                      fontSize: '0.55rem',
+                                      color: '#94a3b8',
+                                      lineHeight: 1,
+                                    }}
+                                  >
+                                    ·
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Right: Notes & Beats Column */}
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          display: 'flex',
+                          flexDirection: 'column',
+                        }}
+                      >
+                        {/* 1. Strum Pattern Bar Row (Above the strings) */}
+                        <div
+                          style={{
+                            height: '24px',
+                            display: 'grid',
+                            gridTemplateColumns: `repeat(${totalBeats}, 1fr)`,
+                            alignItems: 'center',
+                            borderBottom: '1px dashed #e2e8f0',
+                            background: '#fafafa',
+                          }}
+                        >
+                          {Array.from({ length: totalBeats }).map((_, bIdx) => {
+                            const beat = measure.beats?.[bIdx] || {};
+                            const strum = beat.strum;
+                            const isBeatActive = isMeasureActive && currentBeatIdx === bIdx;
+
+                            return (
+                              <div
+                                key={bIdx}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  height: '100%',
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleBeatStrum(absoluteMIdx, bIdx)}
+                                  title={`Beat ${bIdx + 1}: ${strum ? strum.toUpperCase() : 'No strum'} (click to cycle Down, Up, Hit, Miss)`}
+                                  style={{
+                                    border: 'none',
+                                    background: strum === 'down'
+                                      ? '#e0e7ff'
+                                      : strum === 'up'
+                                      ? '#dcfce7'
+                                      : strum === 'hit'
+                                      ? '#ffedd5'
+                                      : strum === 'rest'
+                                      ? '#f1f5f9'
+                                      : 'transparent',
+                                    color: strum === 'down'
+                                      ? '#4338ca'
+                                      : strum === 'up'
+                                      ? '#15803d'
+                                      : strum === 'hit'
+                                      ? '#c2410c'
+                                      : strum === 'rest'
+                                      ? '#64748b'
+                                      : '#94a3b8',
+                                    borderRadius: 'var(--radius-xs)',
+                                    padding: '1px 3px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '0.66rem',
+                                    fontWeight: 800,
+                                    minWidth: '18px',
+                                    height: '18px',
+                                    boxShadow: isBeatActive && strum ? '0 0 6px rgba(99, 102, 241, 0.4)' : 'none',
+                                    transform: isBeatActive && strum ? 'scale(1.15)' : 'none',
+                                    transition: 'transform 0.1s ease',
+                                  }}
+                                >
+                                  {strum === 'down' && (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                                      <ArrowDown size={11} strokeWidth={3} />
+                                      <span>D</span>
+                                    </span>
+                                  )}
+                                  {strum === 'up' && (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+                                      <ArrowUp size={11} strokeWidth={3} />
+                                      <span>U</span>
+                                    </span>
+                                  )}
+                                  {strum === 'hit' && <span>✕</span>}
+                                  {strum === 'rest' && <span>—</span>}
+                                  {!strum && <span style={{ opacity: 0.35, fontSize: '0.62rem' }}>·</span>}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* 2. Staff Notes Area (100px height with 6 horizontal lines) */}
+                        <div
+                          style={{
+                            position: 'relative',
+                            height: '100px',
+                            display: 'grid',
+                            gridTemplateColumns: `repeat(${totalBeats}, 1fr)`,
+                          }}
+                        >
+                          {/* The 6 horizontal black staff lines */}
+                          {[0, 1, 2, 3, 4, 5].map((lineIdx) => (
+                            <div
+                              key={lineIdx}
+                              style={{
+                                position: 'absolute',
+                                left: 0,
+                                right: 0,
+                                top: `${lineIdx * 20}px`,
+                                height: '1px',
+                                background: '#000000',
+                                pointerEvents: 'none',
+                              }}
+                            />
+                          ))}
+
+                          {/* Subdivision Beat Columns */}
+                          {Array.from({ length: totalBeats }).map((_, bIdx) => {
+                            const isBeatActive = isMeasureActive && currentBeatIdx === bIdx;
+                            const beatNote = measure.beats?.[bIdx];
+
+                            return (
+                              <div
+                                key={bIdx}
+                                style={{
+                                  position: 'relative',
+                                  height: '100%',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                {/* ACTIVE PLAYHEAD CURSOR */}
+                                {isBeatActive && (
+                                  <div
+                                    style={{
+                                      position: 'absolute',
+                                      inset: '-26px -3px -30px -3px',
+                                      border: '2px solid rgba(220, 38, 38, 0.45)',
+                                      borderRadius: '8px',
+                                      background: 'rgba(34, 197, 94, 0.12)',
+                                      pointerEvents: 'none',
+                                      zIndex: 10,
+                                      boxShadow: '0 0 14px rgba(34, 197, 94, 0.25)',
+                                    }}
+                                  />
+                                )}
+
+                                {/* 6 Clickable string points for this beat (supports multiple simultaneous notes) */}
+                                {[0, 1, 2, 3, 4, 5].map((strIdx) => {
+                                  const noteFret = getBeatNoteFretForString(beatNote, strIdx);
+                                  const isCellSelected =
+                                    activeCell?.mIdx === absoluteMIdx &&
+                                    activeCell?.bIdx === bIdx &&
+                                    activeCell?.strIdx === strIdx;
+
+                                  return (
+                                    <div
+                                      key={strIdx}
+                                      onClick={() =>
+                                        handleCellClick(
+                                          absoluteMIdx,
+                                          bIdx,
+                                          strIdx,
+                                          noteFret
+                                        )
+                                      }
+                                      style={{
+                                        position: 'absolute',
+                                        top: `${strIdx * 20 - 9}px`,
+                                        width: '18px',
+                                        height: '18px',
+                                        borderRadius: '3px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        zIndex: 5,
+                                        background: noteFret !== null
+                                          ? '#ffffff'
+                                          : isCellSelected
+                                          ? 'var(--accent-primary-subtle)'
+                                          : 'transparent',
+                                        border: isCellSelected
+                                          ? '1.5px solid var(--accent-primary)'
+                                          : 'none',
+                                        userSelect: 'none',
+                                      }}
+                                    >
+                                      {noteFret !== null && (
+                                        <span
+                                          style={{
+                                            fontFamily: 'var(--font-heading)',
+                                            fontWeight: 800,
+                                            fontSize: '0.88rem',
+                                            color: isBeatActive ? '#15803d' : '#000000',
+                                            lineHeight: 1,
+                                          }}
+                                        >
+                                          {noteFret}
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   );
@@ -1462,39 +2025,51 @@ export default function InteractiveTabStaff({
                     <div
                       key={measure.measureNum}
                       style={{
-                        display: 'grid',
-                        gridTemplateColumns: `repeat(${totalBeats}, 1fr)`,
+                        display: 'flex',
                         height: '24px',
                       }}
                     >
-                      {Array.from({ length: numPairs }).map((_, pairIdx) => {
-                        const spanCount = Math.min(2, totalBeats - pairIdx * 2);
+                      {/* Spacer matching 46px Chord Position Guide column */}
+                      <div style={{ width: '46px', flexShrink: 0 }} />
 
-                        return (
-                          <div
-                            key={pairIdx}
-                            style={{
-                              gridColumn: `${pairIdx * 2 + 1} / span ${spanCount}`,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              padding: '0 6px',
-                            }}
-                          >
+                      {/* Rhythm Stems aligned with Beats */}
+                      <div
+                        style={{
+                          flex: 1,
+                          display: 'grid',
+                          gridTemplateColumns: `repeat(${totalBeats}, 1fr)`,
+                          height: '24px',
+                        }}
+                      >
+                        {Array.from({ length: numPairs }).map((_, pairIdx) => {
+                          const spanCount = Math.min(2, totalBeats - pairIdx * 2);
+
+                          return (
                             <div
+                              key={pairIdx}
                               style={{
-                                width: '100%',
+                                gridColumn: `${pairIdx * 2 + 1} / span ${spanCount}`,
                                 display: 'flex',
-                                justifyContent: 'space-between',
-                                height: '14px',
-                                borderBottom: '2.5px solid #000000',
-                                borderLeft: '2px solid #000000',
-                                borderRight: spanCount > 1 ? '2px solid #000000' : 'none',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                padding: '0 6px',
                               }}
-                            />
-                          </div>
-                        );
-                      })}
+                            >
+                              <div
+                                style={{
+                                  width: '100%',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  height: '14px',
+                                  borderBottom: '2.5px solid #000000',
+                                  borderLeft: '2px solid #000000',
+                                  borderRight: spanCount > 1 ? '2px solid #000000' : 'none',
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
@@ -1580,6 +2155,85 @@ export default function InteractiveTabStaff({
             </div>
           );
         })}
+      </div>
+
+      {/* Hotel California 8-Chunk Lesson Breakdown (Positioned Below the Chords Sheet) */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid var(--border-default)',
+          padding: '1.25rem',
+          marginTop: '1rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.1rem' }}>🦅</span>
+            <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 800, fontSize: '0.98rem', color: 'var(--text-primary)' }}>
+              Hotel California Intro — 8 Chunks Breakdown (Capo 7th Fret)
+            </span>
+          </div>
+          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--accent-primary)', background: '#ffffff', padding: '0.2rem 0.6rem', borderRadius: 'var(--radius-full)', border: '1px solid var(--border-default)' }}>
+            Capo 7 • Directional Picking • Dynamic Beats & Strumming
+          </span>
+        </div>
+
+        <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '0.85rem' }}>
+          As an absolute beginner, the key is taking it one chunk at a time. Each chunk can now have <strong>more than 8 beats</strong> using the <strong>[+]</strong> button, and you can add <strong>Strum Patterns (Down ↓, Up ↑, Hit ✕)</strong> directly above each beat! Click any chunk below to jump:
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.6rem' }}>
+          {[
+            { num: 1, chord: 'E minor', time: '2:36', desc: 'Pick 3rd from top, 3rd from bottom, 3rd from top, 2nd from bottom. Release ring & strum 3rd & 2nd from bottom together.' },
+            { num: 2, chord: 'B7', time: '6:55', desc: 'Index 1st fret (3rd from top), Middle 2nd fret (2nd from top), Ring 2nd fret (3rd from bottom), Pinky 2nd fret (bottom).' },
+            { num: 3, chord: 'Dsus2', time: '10:25', desc: 'Index on 2nd fret (3rd from bottom), Ring on 3rd fret (2nd from bottom). Steady picking across treble strings.' },
+            { num: 4, chord: 'A9 variation', time: '13:50', desc: 'Ring on 4th fret (2nd from top), Index on 2nd fret (3rd from top). Focus on smooth melodic flow.' },
+            { num: 5, chord: 'C major', time: '18:03', desc: 'Standard C. End with open bottom string & hammer-on with middle finger to 2nd fret of 3rd string from top.' },
+            { num: 6, chord: 'G major', time: '20:06', desc: 'Ring 3rd fret (bottom), Middle 3rd fret (top), Index 2nd fret (2nd from top). Keep picking steady.' },
+            { num: 7, chord: 'A minor 7', time: '23:00', desc: 'Index on 1st fret (2nd from bottom), Middle on 2nd fret (3rd from top). Classic melodic pattern.' },
+            { num: 8, chord: 'B7 return', time: '24:25', desc: 'Return to B7 shape from Chunk #2 to close the intro.' },
+          ].map((chunk) => {
+            const isTarget = currentMeasureIdx === chunk.num - 1;
+            return (
+              <div
+                key={chunk.num}
+                onClick={() => {
+                  setCurrentMeasureIdx(chunk.num - 1);
+                  setCurrentBeatIdx(0);
+                  const targetEl = document.getElementById(`staff-measure-${chunk.num - 1}`);
+                  if (targetEl) {
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                  const m = measures[chunk.num - 1];
+                  if (m?.beats?.[0]?.fret !== undefined) {
+                    playTabNote(m.beats[0].string, m.beats[0].fret, capo);
+                  }
+                }}
+                style={{
+                  background: isTarget ? 'var(--accent-primary-subtle)' : '#ffffff',
+                  border: isTarget ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-default)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.65rem 0.85rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: isTarget ? 'var(--accent-primary)' : 'var(--text-primary)' }}>
+                    Chunk #{chunk.num} ({chunk.chord})
+                  </span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-dim)' }}>
+                    {chunk.time}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>
+                  {chunk.desc}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Modal View for Chord Finger Position Diagram */}

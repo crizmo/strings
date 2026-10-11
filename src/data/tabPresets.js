@@ -65,6 +65,7 @@ Any [Am7]time of year, you can [B7]find it here`,
       {
         measureNum: 1,
         chord: 'Em',
+        fingerGuide: '2:A2  3:D2',
         chunkLabel: 'Chunk 1 (2:36)',
         beats: [
           { string: 3, fret: 2, strum: 'down' }, // 3rd string from top (D) with intro strum
@@ -82,6 +83,7 @@ Any [Am7]time of year, you can [B7]find it here`,
       {
         measureNum: 2,
         chord: 'B7',
+        fingerGuide: '1:D1  2:A2  3:G2  4:e2',
         chunkLabel: 'Chunk 2 (6:55)',
         beats: [
           { string: 3, fret: 1 }, // 3rd from top
@@ -99,6 +101,7 @@ Any [Am7]time of year, you can [B7]find it here`,
       {
         measureNum: 3,
         chord: 'Dsus2',
+        fingerGuide: '1:G2  3:B3',
         chunkLabel: 'Chunk 3 (10:25)',
         beats: [
           { string: 3, fret: 0 }, // 3rd from top (D open)
@@ -116,6 +119,7 @@ Any [Am7]time of year, you can [B7]find it here`,
       {
         measureNum: 4,
         chord: 'A9',
+        fingerGuide: '3:A4  1:D2',
         chunkLabel: 'Chunk 4 (13:50)',
         beats: [
           { string: 4, fret: 4 }, // 2nd from top (A string 4th fret)
@@ -133,6 +137,7 @@ Any [Am7]time of year, you can [B7]find it here`,
       {
         measureNum: 5,
         chord: 'C',
+        fingerGuide: '1:B1  2:D2  3:A3',
         chunkLabel: 'Chunk 5 (18:03)',
         beats: [
           { string: 4, fret: 3 }, // 2nd from top (A)
@@ -150,6 +155,7 @@ Any [Am7]time of year, you can [B7]find it here`,
       {
         measureNum: 6,
         chord: 'G',
+        fingerGuide: '2:E3  1:A2  3:e3',
         chunkLabel: 'Chunk 6 (20:06)',
         beats: [
           { string: 5, fret: 3 }, // top string (Low E)
@@ -167,6 +173,7 @@ Any [Am7]time of year, you can [B7]find it here`,
       {
         measureNum: 7,
         chord: 'Am7',
+        fingerGuide: '1:B1  2:D2',
         chunkLabel: 'Chunk 7 (23:00)',
         beats: [
           { string: 4, fret: 0 }, // 2nd from top (A open)
@@ -184,6 +191,7 @@ Any [Am7]time of year, you can [B7]find it here`,
       {
         measureNum: 8,
         chord: 'B7',
+        fingerGuide: '1:D1  2:A2  3:G2  4:e2',
         chunkLabel: 'Chunk 8 (24:25)',
         beats: [
           { string: 3, fret: 1 }, // 3rd from top

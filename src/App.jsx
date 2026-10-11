@@ -1,6 +1,7 @@
 // String: Premium Acoustic Guitar Studio — Dark Theme
 import React, { useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import Sidebar from './components/Layout/Sidebar';
 import BottomNav from './components/Layout/BottomNav';
 import HomePage from './components/Home/HomePage';
@@ -54,6 +55,7 @@ export default function App() {
         </div>
       </main>
       <BottomNav />
+      <Analytics />
     </div>
   );
 }
